@@ -4,207 +4,384 @@ import '../../Core/Error/failures.dart';
 import '../../Domain/Entities/course_entity.dart';
 import '../../Domain/Entities/lesson_entity.dart';
 import '../../Domain/Entities/quiz_entity.dart';
+import '../../Domain/Entities/live_class_entity.dart';
+import '../../Domain/Entities/certificate_entity.dart';
+import '../../Domain/Entities/store_item_entity.dart';
+import '../../Domain/Entities/comment_entity.dart';
+import '../../Domain/Entities/rating_entity.dart';
+import '../../Domain/Entities/user_preference_entity.dart';
 import '../../Domain/Repositories/course_repository.dart';
 import '../DataSources/course_remote_data_source.dart';
+import '../DataSources/auth_local_data_source.dart';
+import '../Models/user_preference_model.dart';
+import '../Models/comment_model.dart';
 import 'dart:developer';
 
 class CourseRepositoryImpl implements CourseRepository {
   final CourseRemoteDataSource remoteDataSource;
+  final AuthLocalDataSource localDataSource;
 
-  CourseRepositoryImpl({required this.remoteDataSource});
+  CourseRepositoryImpl({
+    required this.remoteDataSource,
+    required this.localDataSource,
+  });
 
   @override
   Future<Either<Failure, List<CourseEntity>>> getAllCourses() async {
-    log('Repo: Fetching all courses');
     try {
       final courses = await remoteDataSource.getAllCourses();
-      log('Repo Success: Fetched ${courses.length} courses');
       return Right(courses);
     } catch (e) {
-      log('Repo Error: Fetching all courses failed: $e');
+      log('Repo Error: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
   Future<Either<Failure, CourseEntity>> getCourseById(String id) async {
-    log('Repo: Fetching course by id: $id');
     try {
       final course = await remoteDataSource.getCourseById(id);
-      log('Repo Success: Fetched course details for ${course.title}');
       return Right(course);
     } catch (e) {
-      log('Repo Error: Fetching course failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<CourseEntity>>> getMyCourses() async {
-    log('Repo: Fetching enrolled courses');
+  Future<Either<Failure, List<CourseEntity>>> getMyEnrollments() async {
     try {
-      final courses = await remoteDataSource.getMyCourses();
-      log('Repo Success: Fetched ${courses.length} enrolled courses');
+      final courses = await remoteDataSource.getMyEnrollments();
       return Right(courses);
     } catch (e) {
-      log('Repo Error: Fetching enrolled courses failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, void>> enrollInCourse(String courseId) async {
-    log('Repo: Enrolling in course: $courseId');
+  Future<Either<Failure, Unit>> enrollInCourse(String courseId) async {
     try {
       await remoteDataSource.enrollInCourse(courseId);
-      log('Repo Success: Enrollment successful');
-      return const Right(null);
+      return const Right(unit);
     } catch (e) {
-      log('Repo Error: Enrollment failed: $e');
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
-  @override
-  Future<Either<Failure, List<LessonEntity>>> getLessonsByCourse(String courseId) async {
-    log('Repo: Fetching lessons for course: $courseId');
-    try {
-      final lessons = await remoteDataSource.getLessonsByCourse(courseId);
-      log('Repo Success: Fetched ${lessons.length} lessons');
-      return Right(lessons);
-    } catch (e) {
-      log('Repo Error: Fetching lessons failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
   Future<Either<Failure, bool>> checkEnrollmentStatus(String courseId) async {
-    log('Repo: Checking enrollment status for $courseId');
     try {
-      final isEnrolled = await remoteDataSource.checkEnrollmentStatus(courseId);
-      log('Repo Success: Enrollment status for $courseId is $isEnrolled');
-      return Right(isEnrolled);
+      final status = await remoteDataSource.checkEnrollmentStatus(courseId);
+      // Assuming it returns a map with a boolean or similar, based on the check status logic
+      // In CourseRemoteDataSource it returns Future<Map<String, dynamic>>
+      // If the data exists and is valid, user is enrolled.
+      return Right(status.isNotEmpty);
     } catch (e) {
-      log('Repo Error: Checking enrollment status failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, void>> saveVideoProgress(String lessonId, double progress) async {
-    log('Repo: Saving video progress for lesson $lessonId: $progress');
+  Future<Either<Failure, List<LessonEntity>>> getLessonsByCourse(String courseId) async {
     try {
-      await remoteDataSource.saveVideoProgress(lessonId, progress);
-      log('Repo Success: Video progress saved');
+      final lessons = await remoteDataSource.getLessonsByCourse(courseId);
+      return Right(lessons);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> toggleWishlist(String courseId) async {
+    try {
+      final user = await localDataSource.getUser();
+      if (user == null) return Left(AuthFailure('User not logged in'));
+      await remoteDataSource.toggleWishlist(courseId, user.id);
+      return const Right(unit);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> checkWishlist(String courseId) async {
+    try {
+      final user = await localDataSource.getUser();
+      if (user == null) return const Right(false);
+      final isWishlisted = await remoteDataSource.checkWishlist(courseId, user.id);
+      return Right(isWishlisted);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> saveVideoProgress(String lessonId, Map<String, dynamic> progressData) async {
+    try {
+      await remoteDataSource.saveVideoProgress(lessonId, progressData);
       return const Right(null);
     } catch (e) {
-      log('Repo Error: Saving video progress failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, QuizEntity>> getQuizByLesson(String lessonId) async {
-    log('Repo: Fetching quiz for lesson $lessonId');
+  Future<Either<Failure, Map<String, dynamic>>> getVideoProgress(String lessonId) async {
     try {
-      final quiz = await remoteDataSource.getQuizByLesson(lessonId);
-      log('Repo Success: Fetched quiz ${quiz.title}');
-      return Right(quiz);
+      final user = await localDataSource.getUser();
+      if (user == null) return Left(AuthFailure('User not logged in'));
+      final progress = await remoteDataSource.getVideoProgress(lessonId, user.id);
+      return Right(progress);
     } catch (e) {
-      log('Repo Error: Fetching quiz failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, void>> submitQuizAttempt(String quizId, Map<String, dynamic> answers) async {
-    log('Repo: Submitting quiz attempt for quiz $quizId');
+  Future<Either<Failure, List<QuestionEntity>>> getQuizQuestions(String lessonId) async {
     try {
-      await remoteDataSource.submitQuizAttempt(quizId, answers);
-      log('Repo Success: Quiz attempt submitted');
-      return const Right(null);
+      final questions = await remoteDataSource.getQuizQuestions(lessonId);
+      return Right(questions);
     } catch (e) {
-      log('Repo Error: Submitting quiz attempt failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, CourseEntity>> createCourse(Map<String, dynamic> courseData) async {
-    log('Repo: Creating course');
+  Future<Either<Failure, Map<String, dynamic>>> submitQuiz(String lessonId, Map<String, dynamic> answers) async {
     try {
-      final course = await remoteDataSource.createCourse(courseData);
-      log('Repo Success: Course created with id ${course.id}');
-      return Right(course);
+      final user = await localDataSource.getUser();
+      if (user == null) return Left(AuthFailure('User not logged in'));
+      final payload = {
+        'userId': user.id,
+        'answers': answers,
+      };
+      final result = await remoteDataSource.submitQuiz(lessonId, payload);
+      return Right(result);
     } catch (e) {
-      log('Repo Error: Creating course failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, void>> uploadThumbnail(String courseId, File thumbnail) async {
-    log('Repo: Uploading thumbnail for course $courseId');
+  Future<Either<Failure, bool>> hasAttemptedQuiz(String lessonId) async {
     try {
-      await remoteDataSource.uploadThumbnail(courseId, thumbnail);
-      log('Repo Success: Thumbnail uploaded');
-      return const Right(null);
+      final user = await localDataSource.getUser();
+      if (user == null) return const Right(false);
+      final hasAttempted = await remoteDataSource.hasAttemptedQuiz(lessonId, user.id);
+      return Right(hasAttempted);
     } catch (e) {
-      log('Repo Error: Uploading thumbnail failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, LessonEntity>> createLesson(Map<String, dynamic> lessonData) async {
-    log('Repo: Creating lesson');
+  Future<Either<Failure, List<dynamic>>> getQuizLeaderboard() async {
     try {
-      final lesson = await remoteDataSource.createLesson(lessonData);
-      log('Repo Success: Lesson created with id ${lesson.id}');
-      return Right(lesson);
+      final leaderboard = await remoteDataSource.getQuizLeaderboard();
+      return Right(leaderboard);
     } catch (e) {
-      log('Repo Error: Creating lesson failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, void>> uploadLessonVideo(String lessonId, File video) async {
-    log('Repo: Uploading video for lesson $lessonId');
+  Future<Either<Failure, List<LiveClassEntity>>> getLiveClassesByCourse(String courseId) async {
     try {
-      await remoteDataSource.uploadLessonVideo(lessonId, video);
-      log('Repo Success: Video uploaded');
-      return const Right(null);
+      final classes = await remoteDataSource.getLiveClassesByCourse(courseId);
+      return Right(classes);
     } catch (e) {
-      log('Repo Error: Uploading video failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, void>> setLessonYoutubeUrl(String lessonId, String youtubeUrl) async {
-    log('Repo: Setting YouTube URL for lesson $lessonId');
+  Future<Either<Failure, Map<String, dynamic>>> joinLiveClass(String id) async {
     try {
-      await remoteDataSource.setLessonYoutubeUrl(lessonId, youtubeUrl);
-      log('Repo Success: YouTube URL set');
-      return const Right(null);
+      final data = await remoteDataSource.joinLiveClass(id);
+      return Right(data);
     } catch (e) {
-      log('Repo Error: Setting YouTube URL failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, void>> createQuiz(Map<String, dynamic> quizData) async {
-    log('Repo: Creating quiz');
+  Future<Either<Failure, List<StoreItemEntity>>> getStoreItems() async {
     try {
-      await remoteDataSource.createQuiz(quizData);
-      log('Repo Success: Quiz created');
-      return const Right(null);
+      final items = await remoteDataSource.getStoreItems();
+      return Right(items);
     } catch (e) {
-      log('Repo Error: Creating quiz failed: $e');
       return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<CertificateEntity>>> getMyCertificates() async {
+    try {
+      final user = await localDataSource.getUser();
+      if (user == null) return Left(AuthFailure('User not logged in'));
+      final certificates = await remoteDataSource.getMyCertificates(user.id);
+      return Right(certificates);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<CourseEntity>>> getTeacherCourses() async {
+    try {
+      final courses = await remoteDataSource.getTeacherCourses();
+      return Right(courses);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> createCourse(Map<String, dynamic> data) async {
+    try {
+      final id = await remoteDataSource.createCourse(data);
+      return Right(id);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> uploadThumbnail(String id, File image) async {
+    try {
+      await remoteDataSource.uploadThumbnail(id, image);
+      return const Right(unit);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> createLesson(Map<String, dynamic> data) async {
+    try {
+      final id = await remoteDataSource.createLesson(data);
+      return Right(id);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> uploadLessonVideo(String id, File video) async {
+    try {
+      await remoteDataSource.uploadLessonVideo(id, video);
+      return const Right(unit);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> setLessonVideoUrl(String id, String url) async {
+    try {
+      await remoteDataSource.setVideoUrl(id, url);
+      return const Right(unit);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> createLiveClass(Map<String, dynamic> data) async {
+    try {
+      await remoteDataSource.createLiveClass(data);
+      return const Right(unit);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<dynamic>>> getEnrolledStudents(String courseId) async {
+    try {
+      final students = await remoteDataSource.getEnrolledStudents(courseId);
+      return Right(students);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> addQuizQuestion(String lessonId, Map<String, dynamic> quizData) async {
+    try {
+      await remoteDataSource.addQuizQuestion(lessonId, quizData);
+      return const Right(unit);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> addRating(Map<String, dynamic> data) async {
+    try {
+      await remoteDataSource.addRating(data);
+      return const Right(unit);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> getRatingSummary(String courseId) async {
+    try {
+      final summary = await remoteDataSource.getRatingSummary(courseId);
+      return Right(summary);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<CommentEntity>>> getCourseComments(String courseId, {int pageNumber = 1, int pageSize = 10}) async {
+    try {
+      final comments = await remoteDataSource.getCourseComments(courseId, pageNumber, pageSize);
+      return Right(comments.map((e) => CommentModel.fromJson(e)).toList());
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> addComment(Map<String, dynamic> data) async {
+    try {
+      await remoteDataSource.addComment(data);
+      return const Right(unit);
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> saveUserPreferences(UserPreferenceEntity preferences) async {
+    try {
+      final model = UserPreferenceModel(
+        categories: preferences.categories,
+        learningGoal: preferences.learningGoal,
+        dailyTime: preferences.dailyTime,
+      );
+      await localDataSource.cacheUserPreferences(model);
+      return const Right(unit);
+    } catch (e) {
+      return Left(CacheFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserPreferenceEntity>> getUserPreferences() async {
+    try {
+      final preferences = await localDataSource.getUserPreferences();
+      if (preferences != null) {
+        return Right(preferences);
+      } else {
+        return Left(CacheFailure('No preferences found'));
+      }
+    } catch (e) {
+      return Left(CacheFailure(e.toString()));
     }
   }
 }

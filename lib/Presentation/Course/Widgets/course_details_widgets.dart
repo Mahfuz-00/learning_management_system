@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../Domain/Entities/course_entity.dart';
 import '../../../Domain/Entities/lesson_entity.dart';
-import '../../../Core/Constants/constants.dart';
+import '../../../Core/Constants/app_constants.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class CourseHeader extends StatelessWidget {
@@ -15,7 +15,7 @@ class CourseHeader extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CachedNetworkImage(
-          imageUrl: '${AppConstants.imagesUrl}${course.thumbnail}',
+          imageUrl: '${AppConstants.imagesPath}${course.thumbnail}',
           height: 200,
           width: double.infinity,
           fit: BoxFit.cover,
@@ -72,7 +72,7 @@ class LessonList extends StatelessWidget {
             child: Text('${index + 1}'),
           ),
           title: Text(lesson.title),
-          subtitle: Text(lesson.isVideo ? 'Video Lesson' : 'Text Lesson'),
+          subtitle: Text(lesson.hasVideo ? 'Video Lesson' : 'Text Lesson'),
           trailing: const Icon(Icons.play_circle_outline),
           onTap: () => onLessonTap(lesson),
         );

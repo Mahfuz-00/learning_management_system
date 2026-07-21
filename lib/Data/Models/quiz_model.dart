@@ -2,30 +2,20 @@ import '../../Domain/Entities/quiz_entity.dart';
 
 class QuizModel extends QuizEntity {
   const QuizModel({
-    required super.id,
     required super.lessonId,
-    required super.title,
     required super.questions,
+    super.hasAttempted,
+    super.score,
   });
 
   factory QuizModel.fromJson(Map<String, dynamic> json) {
+    final List data = json['data'] ?? [];
     return QuizModel(
-      id: json['id']?.toString() ?? '',
-      lessonId: json['lessonId']?.toString() ?? '',
-      title: json['title'] ?? '',
-      questions: (json['questions'] as List? ?? [])
-          .map((q) => QuestionModel.fromJson(q))
-          .toList(),
+      lessonId: '', // Usually not returned in the list itself but known from context
+      questions: data.map((e) => QuestionModel.fromJson(e)).toList(),
+      hasAttempted: json['hasAttempted'] ?? false,
+      score: json['score'],
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'lessonId': lessonId,
-      'title': title,
-      'questions': questions.map((q) => (q as QuestionModel).toJson()).toList(),
-    };
   }
 }
 
@@ -34,24 +24,23 @@ class QuestionModel extends QuestionEntity {
     required super.id,
     required super.text,
     required super.options,
-    required super.correctOptionIndex,
+    super.correctAnswer,
   });
 
   factory QuestionModel.fromJson(Map<String, dynamic> json) {
     return QuestionModel(
-      id: json['id']?.toString() ?? '',
-      text: json['text'] ?? '',
+      id: (json['id'] ?? '').toString(),
+      text: json['question'] ?? '',
       options: List<String>.from(json['options'] ?? []),
-      correctOptionIndex: json['correctOptionIndex'] ?? 0,
+      correctAnswer: json['correctAnswer'],
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'text': text,
+      'question': text,
       'options': options,
-      'correctOptionIndex': correctOptionIndex,
+      'correctAnswer': correctAnswer,
     };
   }
 }

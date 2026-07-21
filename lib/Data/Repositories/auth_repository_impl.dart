@@ -2,83 +2,103 @@ import 'package:dartz/dartz.dart';
 import '../../Core/Error/failures.dart';
 import '../../Domain/Entities/user_entity.dart';
 import '../../Domain/Repositories/auth_repository.dart';
+import '../DataSources/auth_local_data_source.dart';
 import '../DataSources/auth_remote_data_source.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../../Core/Constants/constants.dart';
+import '../Models/user_model.dart';
 import 'dart:developer';
 
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
-  final SharedPreferences sharedPreferences;
+  final AuthLocalDataSource localDataSource;
 
   AuthRepositoryImpl({
     required this.remoteDataSource,
-    required this.sharedPreferences,
+    required this.localDataSource,
   });
 
   @override
   Future<Either<Failure, UserEntity>> login(String email, String password) async {
-    log('Repo: Login attempt for $email');
     try {
       final userModel = await remoteDataSource.login(email, password);
       if (userModel.token != null) {
-        log('Repo: Login successful, saving token');
-        await sharedPreferences.setString(AppConstants.tokenKey, userModel.token!);
-        await sharedPreferences.setString(AppConstants.userRoleKey, userModel.role);
+        await localDataSource.cacheToken(userModel.token!);
       }
+      await localDataSource.cacheUser(userModel);
       return Right(userModel);
     } catch (e) {
-      log('Repo Error: Login failed: $e');
+      log('AuthRepo Error: $e');
+      return Left(AuthFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> register(Map<String, dynamic> signupData) async {
+    try {
+      await remoteDataSource.register(signupData);
+      return const Right(unit);
+    } catch (e) {
+      log('AuthRepo Error: $e');
+      return Left(AuthFailure(e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserEntity>> getProfile() async {
+    try {
+      final userModel = await remoteDataSource.getProfile();
+      await localDataSource.cacheUser(userModel);
+      return Right(userModel);
+    } catch (e) {
+      final localUser = await localDataSource.getUser();
+      if (localUser != null) {
+        return Right(localUser);
+      }
+      return Left(CacheFailure('No cached user found'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> isUserLoggedIn() async {
+    try {
+      final token = await localDataSource.getToken();
+      return Right(token != null && token.isNotEmpty);
+    } catch (e) {
+      return const Left(CacheFailure('Error checking login status'));
+    }
+  }
+
+  @override
+  Future<void> logout() async {
+    await localDataSource.clearCache();
+  }
+
+  @override
+  Future<Either<Failure, Unit>> forgotPassword(String email) async {
+    try {
+      await remoteDataSource.forgotPassword(email);
+      return const Right(unit);
+    } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, UserEntity>> register({
-    required String email,
-    required String password,
-    required String role,
-    required String name,
-  }) async {
-    log('Repo: Register attempt for $email with role $role');
+  Future<Either<Failure, Unit>> verifyOtp(String email, String otp) async {
     try {
-      final userModel = await remoteDataSource.register(
-        email: email,
-        password: password,
-        role: role,
-        name: name,
-      );
-      log('Repo: Register successful');
-      return Right(userModel);
+      await remoteDataSource.verifyOtp(email, otp);
+      return const Right(unit);
     } catch (e) {
-      log('Repo Error: Register failed: $e');
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, void>> logout() async {
-    log('Repo: Logout initiated');
+  Future<Either<Failure, Unit>> resetPassword(String email, String password) async {
     try {
-      await sharedPreferences.remove(AppConstants.tokenKey);
-      await sharedPreferences.remove(AppConstants.userRoleKey);
-      return const Right(null);
+      await remoteDataSource.resetPassword(email, password);
+      return const Right(unit);
     } catch (e) {
-      log('Repo Error: Logout failed: $e');
-      return Left(CacheFailure(e.toString()));
+      return Left(ServerFailure(e.toString()));
     }
-  }
-
-  @override
-  Future<Option<UserEntity>> getLoggedInUser() async {
-    log('Repo: Checking logged in user');
-    final token = sharedPreferences.getString(AppConstants.tokenKey);
-    final role = sharedPreferences.getString(AppConstants.userRoleKey);
-    if (token != null && role != null) {
-      log('Repo: User found with role $role');
-      return Some(UserEntity(id: '', email: '', role: role, token: token));
-    }
-    log('Repo: No logged in user found');
-    return const None();
   }
 }

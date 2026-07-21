@@ -67,8 +67,8 @@ class _LoginFormState extends State<LoginForm> {
                   if (_formKey.currentState!.validate()) {
                     context.read<AuthBloc>().add(
                           LoginRequested(
-                            _emailController.text.trim(),
-                            _passwordController.text.trim(),
+                            email: _emailController.text.trim(),
+                            password: _passwordController.text.trim(),
                           ),
                         );
                   }

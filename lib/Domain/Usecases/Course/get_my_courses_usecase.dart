@@ -9,6 +9,6 @@ class GetMyCoursesUseCase {
   GetMyCoursesUseCase(this.repository);
 
   Future<Either<Failure, List<CourseEntity>>> call() {
-    return repository.getMyCourses();
+    return repository.getMyEnrollments();
   }
 }

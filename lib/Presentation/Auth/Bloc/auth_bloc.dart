@@ -1,83 +1,86 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../Domain/UseCases/Auth/login_usecase.dart';
-import '../../../Domain/UseCases/Auth/register_usecase.dart';
 import '../../../Domain/Repositories/auth_repository.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
-import 'dart:developer';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
-  final LoginUseCase loginUseCase;
-  final RegisterUseCase registerUseCase;
   final AuthRepository authRepository;
 
-  AuthBloc({
-    required this.loginUseCase,
-    required this.registerUseCase,
-    required this.authRepository,
-  }) : super(AuthInitial()) {
+  AuthBloc({required this.authRepository}) : super(AuthInitial()) {
+    on<AuthCheckRequested>(_onAuthCheckRequested);
     on<LoginRequested>(_onLoginRequested);
-    on<RegisterRequested>(_onRegisterRequested);
+    on<SignupRequested>(_onSignupRequested);
     on<LogoutRequested>(_onLogoutRequested);
-    on<CheckAuthStatus>(_onCheckAuthStatus);
+    on<ForgotPasswordRequested>(_onForgotPasswordRequested);
+    on<VerifyOtpRequested>(_onVerifyOtpRequested);
+    on<ResetPasswordRequested>(_onResetPasswordRequested);
+  }
+
+  Future<void> _onAuthCheckRequested(AuthCheckRequested event, Emitter<AuthState> emit) async {
+    final result = await authRepository.isUserLoggedIn();
+    await result.fold(
+      (failure) async => emit(Unauthenticated()),
+      (isLoggedIn) async {
+        if (isLoggedIn) {
+          final profileResult = await authRepository.getProfile();
+          profileResult.fold(
+            (failure) => emit(Unauthenticated()),
+            (user) => emit(Authenticated(user)),
+          );
+        } else {
+          emit(Unauthenticated());
+        }
+      },
+    );
   }
 
   Future<void> _onLoginRequested(LoginRequested event, Emitter<AuthState> emit) async {
-    log('Bloc: LoginRequested for ${event.email}');
     emit(AuthLoading());
-    final result = await loginUseCase(event.email, event.password);
+    final result = await authRepository.login(event.email, event.password);
     result.fold(
-      (failure) {
-        log('Bloc Error: Login failed: ${failure.message}');
-        emit(AuthError(failure.message));
-      },
-      (user) {
-        log('Bloc Success: User authenticated: ${user.email}');
-        emit(Authenticated(user));
-      },
+      (failure) => emit(AuthError(failure.message)),
+      (user) => emit(Authenticated(user)),
     );
   }
 
-  Future<void> _onRegisterRequested(RegisterRequested event, Emitter<AuthState> emit) async {
-    log('Bloc: RegisterRequested for ${event.email}');
+  Future<void> _onSignupRequested(SignupRequested event, Emitter<AuthState> emit) async {
     emit(AuthLoading());
-    final result = await registerUseCase(
-      email: event.email,
-      password: event.password,
-      role: event.role,
-      name: event.name,
-    );
+    final result = await authRepository.register(event.signupData);
     result.fold(
-      (failure) {
-        log('Bloc Error: Register failed: ${failure.message}');
-        emit(AuthError(failure.message));
-      },
-      (user) {
-        log('Bloc Success: User registered: ${user.email}');
-        emit(Authenticated(user));
-      },
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(SignupSuccess()),
     );
   }
 
   Future<void> _onLogoutRequested(LogoutRequested event, Emitter<AuthState> emit) async {
-    log('Bloc: LogoutRequested');
-    emit(AuthLoading());
     await authRepository.logout();
     emit(Unauthenticated());
   }
 
-  Future<void> _onCheckAuthStatus(CheckAuthStatus event, Emitter<AuthState> emit) async {
-    log('Bloc: CheckAuthStatus');
-    final userOption = await authRepository.getLoggedInUser();
-    userOption.fold(
-      () {
-        log('Bloc: User is unauthenticated');
-        emit(Unauthenticated());
-      },
-      (user) {
-        log('Bloc: User is authenticated as ${user.role}');
-        emit(Authenticated(user));
-      },
+  Future<void> _onForgotPasswordRequested(ForgotPasswordRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    final result = await authRepository.forgotPassword(event.email);
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(SignupSuccess()), // Reusing SignupSuccess or similar for generic success
+    );
+  }
+
+  Future<void> _onVerifyOtpRequested(VerifyOtpRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    final result = await authRepository.verifyOtp(event.email, event.otp);
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(SignupSuccess()),
+    );
+  }
+
+  Future<void> _onResetPasswordRequested(ResetPasswordRequested event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    final result = await authRepository.resetPassword(event.email, event.password);
+    result.fold(
+      (failure) => emit(AuthError(failure.message)),
+      (_) => emit(SignupSuccess()),
     );
   }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../Course/Bloc/course_bloc.dart';
 import '../../Course/Bloc/course_event.dart';
 import '../../Course/Bloc/course_state.dart';
 import '../Widgets/teacher_course_widgets.dart';
+import '../../../Core/Navigation/app_router.dart';
 import 'dart:developer';
 
 class TeacherCoursesPage extends StatefulWidget {
@@ -18,9 +20,7 @@ class _TeacherCoursesPageState extends State<TeacherCoursesPage> {
   void initState() {
     super.initState();
     log('UI: TeacherCoursesPage initState - fetching courses for teacher');
-    // Assuming we use the same CourseBloc but might need a "GetInstructorCourses" event later.
-    // For now, let's use GetAllCourses as a placeholder or MyCourses if they are mapped to instructor.
-    context.read<CourseBloc>().add(GetAllCoursesRequested());
+    context.read<CourseBloc>().add(LoadTeacherCourses());
   }
 
   @override
@@ -31,37 +31,35 @@ class _TeacherCoursesPageState extends State<TeacherCoursesPage> {
       ),
       body: BlocBuilder<CourseBloc, CourseState>(
         builder: (context, state) {
-          if (state is CourseLoading) {
+          if (state.teacherStatus == CourseStatus.loading) {
             return const Center(child: CircularProgressIndicator());
-          } else if (state is CoursesLoaded) {
-            log('UI: CoursesLoaded for teacher: ${state.courses.length}');
-            if (state.courses.isEmpty) {
+          } else if (state.teacherStatus == CourseStatus.loaded) {
+            log('UI: CoursesLoaded for teacher: ${state.teacherCourses.length}');
+            if (state.teacherCourses.isEmpty) {
               return const Center(child: Text('You haven\'t created any courses yet.'));
             }
             return ListView.builder(
               padding: const EdgeInsets.all(16),
-              itemCount: state.courses.length,
+              itemCount: state.teacherCourses.length,
               itemBuilder: (context, index) {
-                final course = state.courses[index];
+                final course = state.teacherCourses[index];
                 return TeacherCourseCard(
                   course: course,
                   onManage: () {
-                    log('UI: Managing course ${course.title}');
-                    // Navigate to course management page
+                    context.push('/teacher/course-details/${course.id}');
                   },
                 );
               },
             );
-          } else if (state is CourseError) {
-            return Center(child: Text(state.message));
+          } else if (state.teacherStatus == CourseStatus.error) {
+            return Center(child: Text(state.errorMessage ?? 'Error loading courses'));
           }
           return const SizedBox();
         },
       ),
       floatingActionButton: CreateCourseButton(
         onPressed: () {
-          log('UI: Create New Course pressed');
-          // Navigate to create course page
+          context.push(AppRouter.teacherCreateCourse);
         },
       ),
     );

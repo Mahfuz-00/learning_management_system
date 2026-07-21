@@ -82,12 +82,12 @@ class _RegisterFormState extends State<RegisterForm> {
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
                     context.read<AuthBloc>().add(
-                          RegisterRequested(
-                            email: _emailController.text.trim(),
-                            password: _passwordController.text.trim(),
-                            name: _nameController.text.trim(),
-                            role: _selectedRole,
-                          ),
+                          SignupRequested({
+                            'email': _emailController.text.trim(),
+                            'password': _passwordController.text.trim(),
+                            'fullName': _nameController.text.trim(),
+                            'role': _selectedRole == 'Student' ? 0 : 1,
+                          }),
                         );
                   }
                 },

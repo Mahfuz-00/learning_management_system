@@ -1,15 +1,13 @@
 import 'package:dio/dio.dart';
 import '../Models/user_model.dart';
-import 'dart:developer';
 
 abstract class AuthRemoteDataSource {
   Future<UserModel> login(String email, String password);
-  Future<UserModel> register({
-    required String email,
-    required String password,
-    required String role,
-    required String name,
-  });
+  Future<UserModel> register(Map<String, dynamic> signupData);
+  Future<UserModel> getProfile();
+  Future<void> forgotPassword(String email);
+  Future<void> verifyOtp(String email, String otp);
+  Future<void> resetPassword(String email, String password);
 }
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
@@ -19,56 +17,75 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
   @override
   Future<UserModel> login(String email, String password) async {
-    log('API Request: Login with email: $email');
     try {
-      final response = await dio.post('/register/login', data: {
+      final response = await dio.post('register/login', data: {
         'email': email,
         'password': password,
       });
 
-      log('API Response: Login success: ${response.data}');
       if (response.statusCode == 200) {
         return UserModel.fromJson(response.data);
       } else {
-        throw Exception('Failed to login');
+        throw Exception(response.data['message'] ?? 'Failed to login');
       }
     } on DioException catch (e) {
-      log('API Error: Login failed: ${e.response?.data}');
       throw Exception(e.response?.data['message'] ?? 'Network error');
-    } catch (e) {
-      log('API Error: Unexpected error: $e');
-      throw Exception(e.toString());
     }
   }
 
   @override
-  Future<UserModel> register({
-    required String email,
-    required String password,
-    required String role,
-    required String name,
-  }) async {
-    log('API Request: Register for email: $email, role: $role');
+  Future<UserModel> register(Map<String, dynamic> signupData) async {
     try {
-      final response = await dio.post('/register/register', data: {
-        'email': email,
-        'password': password,
-        'role': role,
-        'name': name,
-      });
-
-      log('API Response: Register success: ${response.data}');
+      final response = await dio.post('register/register', data: signupData);
       if (response.statusCode == 200 || response.statusCode == 201) {
         return UserModel.fromJson(response.data);
       } else {
-        throw Exception('Failed to register');
+        throw Exception(response.data['message'] ?? 'Failed to register');
       }
     } on DioException catch (e) {
-      log('API Error: Register failed: ${e.response?.data}');
       throw Exception(e.response?.data['message'] ?? 'Network error');
-    } catch (e) {
-      log('API Error: Unexpected error: $e');
-      throw Exception(e.toString());
+    }
+  }
+
+  @override
+  Future<UserModel> getProfile() async {
+    try {
+      final response = await dio.get('register/profile');
+      if (response.statusCode == 200) {
+        return UserModel.fromJson(response.data);
+      } else {
+        throw Exception('Failed to fetch profile');
+      }
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Network error');
+    }
+  }
+
+  @override
+  Future<void> forgotPassword(String email) async {
+    try {
+      // Endpoint not explicitly in Image 2/3 but requested in workflow
+      await dio.post('register/forgotpassword', data: {'email': email});
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Error sending OTP');
+    }
+  }
+
+  @override
+  Future<void> verifyOtp(String email, String otp) async {
+    try {
+      await dio.post('register/verifyotp', data: {'email': email, 'otp': otp});
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Invalid OTP');
+    }
+  }
+
+  @override
+  Future<void> resetPassword(String email, String password) async {
+    try {
+      await dio.post('register/resetpassword', data: {'email': email, 'password': password});
+    } on DioException catch (e) {
+      throw Exception(e.response?.data['message'] ?? 'Error resetting password');
     }
   }
 }

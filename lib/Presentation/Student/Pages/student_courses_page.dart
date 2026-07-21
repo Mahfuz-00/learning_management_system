@@ -21,7 +21,7 @@ class _StudentCoursesPageState extends State<StudentCoursesPage> {
   void initState() {
     super.initState();
     log('UI: StudentCoursesPage initState - fetching all courses');
-    context.read<CourseBloc>().add(GetAllCoursesRequested());
+    context.read<CourseBloc>().add(LoadAllCourses());
   }
 
   @override
@@ -51,30 +51,30 @@ class _StudentCoursesPageState extends State<StudentCoursesPage> {
           Expanded(
             child: BlocBuilder<CourseBloc, CourseState>(
               builder: (context, state) {
-                if (state is CourseLoading) {
+                if (state.allCoursesStatus == CourseStatus.loading) {
                   return const Center(child: CircularProgressIndicator());
-                } else if (state is CoursesLoaded) {
-                  log('UI: CoursesLoaded with ${state.courses.length} courses for browsing');
-                  if (state.courses.isEmpty) {
+                } else if (state.allCoursesStatus == CourseStatus.loaded) {
+                  log('UI: CoursesLoaded with ${state.allCourses.length} courses for browsing');
+                  if (state.allCourses.isEmpty) {
                     return const Center(child: Text('No courses available.'));
                   }
                   return ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: state.courses.length,
+                    itemCount: state.allCourses.length,
                     itemBuilder: (context, index) {
-                      final course = state.courses[index];
+                      final course = state.allCourses[index];
                       return CourseListItem(
                         course: course,
                         onTap: () {
                           log('UI: Tapped browse course ${course.title}');
-                          context.push('/course-details/${course.id}');
+                          context.push('/course/${course.id}');
                         },
                       );
                     },
                   );
-                } else if (state is CourseError) {
-                  log('UI Error: ${state.message}');
-                  return Center(child: Text(state.message));
+                } else if (state.allCoursesStatus == CourseStatus.error) {
+                  log('UI Error: ${state.errorMessage}');
+                  return Center(child: Text(state.errorMessage ?? 'Error'));
                 }
                 return const SizedBox();
               },

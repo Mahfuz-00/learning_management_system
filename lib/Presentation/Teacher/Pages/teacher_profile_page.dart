@@ -42,7 +42,7 @@ class TeacherProfilePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    state.user.name ?? 'Teacher Name',
+                    state.user.fullName,
                     style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                   ),
                   Text(state.user.email, style: TextStyle(color: Colors.grey[600])),
@@ -50,7 +50,7 @@ class TeacherProfilePage extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: Colors.green.withAlpha(25),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: const Text(

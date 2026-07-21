@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'lesson_entity.dart';
 
 class CourseEntity extends Equatable {
   final String id;
@@ -7,7 +8,10 @@ class CourseEntity extends Equatable {
   final String? thumbnail;
   final double price;
   final String? instructorName;
-  final int? totalLessons;
+  final int totalLessons;
+  final bool isEnrolled;
+  final bool isWishlisted;
+  final List<LessonEntity> lessons;
 
   const CourseEntity({
     required this.id,
@@ -16,9 +20,23 @@ class CourseEntity extends Equatable {
     this.thumbnail,
     required this.price,
     this.instructorName,
-    this.totalLessons,
+    this.totalLessons = 0,
+    this.isEnrolled = false,
+    this.isWishlisted = false,
+    this.lessons = const [],
   });
 
   @override
-  List<Object?> get props => [id, title, description, thumbnail, price, instructorName, totalLessons];
+  List<Object?> get props => [
+        id,
+        title,
+        description,
+        thumbnail,
+        price,
+        instructorName,
+        totalLessons,
+        isEnrolled,
+        isWishlisted,
+        lessons,
+      ];
 }

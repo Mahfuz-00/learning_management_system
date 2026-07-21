@@ -6,7 +6,7 @@ import '../../Repositories/course_repository.dart';
 class GetAllCoursesUseCase {
   final CourseRepository repository;
 
-  GetAllCoursesUseCase(this.repository);
+  const GetAllCoursesUseCase(this.repository);
 
   Future<Either<Failure, List<CourseEntity>>> call() {
     return repository.getAllCourses();
