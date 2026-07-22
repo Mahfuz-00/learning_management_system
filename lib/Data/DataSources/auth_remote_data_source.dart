@@ -26,10 +26,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (response.statusCode == 200) {
         return UserModel.fromJson(response.data);
       } else {
-        throw Exception(response.data['message'] ?? 'Failed to login');
+        throw _handleError(response);
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      throw _handleDioError(e);
     }
   }
 
@@ -40,10 +40,10 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (response.statusCode == 200 || response.statusCode == 201) {
         return UserModel.fromJson(response.data);
       } else {
-        throw Exception(response.data['message'] ?? 'Failed to register');
+        throw _handleError(response);
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      throw _handleDioError(e);
     }
   }
 
@@ -54,20 +54,19 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       if (response.statusCode == 200) {
         return UserModel.fromJson(response.data);
       } else {
-        throw Exception('Failed to fetch profile');
+        throw _handleError(response);
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      throw _handleDioError(e);
     }
   }
 
   @override
   Future<void> forgotPassword(String email) async {
     try {
-      // Endpoint not explicitly in Image 2/3 but requested in workflow
       await dio.post('register/forgotpassword', data: {'email': email});
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Error sending OTP');
+      throw _handleDioError(e);
     }
   }
 
@@ -76,7 +75,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       await dio.post('register/verifyotp', data: {'email': email, 'otp': otp});
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Invalid OTP');
+      throw _handleDioError(e);
     }
   }
 
@@ -85,7 +84,24 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     try {
       await dio.post('register/resetpassword', data: {'email': email, 'password': password});
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Error resetting password');
+      throw _handleDioError(e);
     }
+  }
+
+  // Safe error handling for response data
+  Exception _handleError(Response response) {
+    if (response.data is Map) {
+      return Exception(response.data['message'] ?? 'Server error');
+    }
+    return Exception('Server error: ${response.statusCode}');
+  }
+
+  // Safe error handling for Dio exceptions
+  Exception _handleDioError(DioException e) {
+    if (e.type == DioExceptionType.connectionTimeout) return Exception('Connection timeout');
+    if (e.response?.data is Map) {
+      return Exception(e.response?.data['message'] ?? 'Network error');
+    }
+    return Exception(e.message ?? 'Network error');
   }
 }

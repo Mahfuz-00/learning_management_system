@@ -1,5 +1,5 @@
 class AppConstants {
-  static const String baseUrl = 'http://160.191.150.185:8071/api';
+  static const String baseUrl = 'http://160.191.150.185:8071/api/';
   static const String assetBaseUrl = 'http://160.191.150.185:8071';
   
   // Storage Keys

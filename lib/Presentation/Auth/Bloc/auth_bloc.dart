@@ -17,21 +17,34 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   Future<void> _onAuthCheckRequested(AuthCheckRequested event, Emitter<AuthState> emit) async {
-    final result = await authRepository.isUserLoggedIn();
-    await result.fold(
-      (failure) async => emit(Unauthenticated()),
-      (isLoggedIn) async {
-        if (isLoggedIn) {
-          final profileResult = await authRepository.getProfile();
-          profileResult.fold(
-            (failure) => emit(Unauthenticated()),
-            (user) => emit(Authenticated(user)),
-          );
-        } else {
-          emit(Unauthenticated());
-        }
-      },
-    );
+    print('AuthBloc: Checking auth status...');
+    try {
+      final result = await authRepository.isUserLoggedIn();
+      
+      bool loggedIn = false;
+      result.fold((_) => loggedIn = false, (val) => loggedIn = val);
+
+      if (loggedIn) {
+        print('AuthBloc: User is logged in, fetching profile...');
+        final profileResult = await authRepository.getProfile();
+        profileResult.fold(
+          (failure) {
+            print('AuthBloc: Profile fetch failed');
+            emit(Unauthenticated());
+          },
+          (user) {
+            print('AuthBloc: Authenticated as ${user.fullName}');
+            emit(Authenticated(user));
+          },
+        );
+      } else {
+        print('AuthBloc: User is not logged in');
+        emit(Unauthenticated());
+      }
+    } catch (e) {
+      print('AuthBloc: Auth check error: $e');
+      emit(Unauthenticated());
+    }
   }
 
   Future<void> _onLoginRequested(LoginRequested event, Emitter<AuthState> emit) async {
@@ -62,7 +75,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await authRepository.forgotPassword(event.email);
     result.fold(
       (failure) => emit(AuthError(failure.message)),
-      (_) => emit(SignupSuccess()), // Reusing SignupSuccess or similar for generic success
+      (_) => emit(SignupSuccess()),
     );
   }
 

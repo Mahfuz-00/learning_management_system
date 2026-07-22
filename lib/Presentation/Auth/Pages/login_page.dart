@@ -54,16 +54,21 @@ class _LoginPageState extends State<LoginPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 60),
-                  const Center(
-                    child: Icon(Icons.school, size: 80, color: AppColors.primaryBlue),
+                  Center(
+                    child: Image.asset(
+                      'assets/images/nirvoor-logo.png',
+                      height: 100,
+                      width: 300,
+                      fit: BoxFit.fitWidth,
+                    ),
                   ),
                   const SizedBox(height: 40),
                   Text(
                     'Welcome Back!',
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryBlue,
-                        ),
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.primaryBlue,
+                    ),
                   ),
                   const Text('Login to access your learning dashboard'),
                   const SizedBox(height: 40),
@@ -73,7 +78,18 @@ class _LoginPageState extends State<LoginPage> {
                     hintText: 'Enter your email',
                     prefixIcon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
-                    validator: (value) => value!.isEmpty ? 'Enter your email' : null,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Enter your email';
+                      }
+                      final emailRegex = RegExp(
+                        r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+',
+                      );
+                      if (!emailRegex.hasMatch(value.trim())) {
+                        return 'Enter a valid email address';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 20),
                   CustomTextField(
@@ -103,11 +119,11 @@ class _LoginPageState extends State<LoginPage> {
                         onPressed: () {
                           if (_formKey.currentState!.validate()) {
                             context.read<AuthBloc>().add(
-                                  LoginRequested(
-                                    email: _emailController.text.trim(),
-                                    password: _passwordController.text.trim(),
-                                  ),
-                                );
+                              LoginRequested(
+                                email: _emailController.text.trim(),
+                                password: _passwordController.text.trim(),
+                              ),
+                            );
                           }
                         },
                         child: const Text('LOGIN'),

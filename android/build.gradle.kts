@@ -17,19 +17,18 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
-// Inject namespace into plugins that are missing it (Fix for AGP 8.0+)
+// Fix for AGP 8.0+ Namespace issues in plugins
 subprojects {
-    val subproject = this
-    subproject.plugins.withId("com.android.library") {
-        val android = subproject.extensions.findByName("android") as? com.android.build.gradle.BaseExtension
-        if (android?.namespace == null) {
-            android?.namespace = "com.jitsi.meet." + subproject.name.replace("-", "_")
-        }
-    }
-    subproject.plugins.withId("com.android.application") {
-        val android = subproject.extensions.findByName("android") as? com.android.build.gradle.BaseExtension
-        if (android?.namespace == null) {
-            android?.namespace = "com.jitsi.meet." + subproject.name.replace("-", "_")
+    plugins.withId("com.android.library") {
+        configure<com.android.build.gradle.LibraryExtension> {
+            if (namespace == null) {
+                // If it's the jitsi plugin, use its expected package name
+                if (project.name.contains("jitsi_meet")) {
+                    namespace = "org.jitsi.jitsi_meet_flutter_sdk"
+                } else {
+                    namespace = "com.lms.touch_and_solve." + project.name.replace("-", "_")
+                }
+            }
         }
     }
 }

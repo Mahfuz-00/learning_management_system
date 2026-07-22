@@ -29,13 +29,15 @@ final sl = GetIt.instance;
 Future<void> init() async {
   // External
   await Hive.initFlutter();
-  sl.registerLazySingleton(() => Dio());
-  sl.registerLazySingleton(() => DioClient(sl()));
+  
+  // Data sources - init them first
+  final authLocalDataSource = AuthLocalDataSourceImpl();
+  await authLocalDataSource.init();
+  sl.registerLazySingleton<AuthLocalDataSource>(() => authLocalDataSource);
 
-  // Data sources
-  sl.registerLazySingleton<AuthLocalDataSource>(
-    () => AuthLocalDataSourceImpl(),
-  );
+  sl.registerLazySingleton(() => Dio());
+  sl.registerLazySingleton(() => DioClient(sl(), sl())); // Pass authLocalDataSource to DioClient
+
   sl.registerLazySingleton<AuthRemoteDataSource>(
     () => AuthRemoteDataSourceImpl(dio: sl<DioClient>().dio),
   );
@@ -70,9 +72,10 @@ Future<void> init() async {
   );
 
   // BLoCs
-  sl.registerFactory(
+  sl.registerLazySingleton(
     () => AuthBloc(authRepository: sl()),
   );
+
   sl.registerFactory(
     () => PreferenceBloc(repository: sl()),
   );

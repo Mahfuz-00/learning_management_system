@@ -16,6 +16,9 @@ void main() async {
   
   // Initialize Local Notifications
   await NotificationService.init();
+
+  // Trigger Auth Check immediately to avoid lazy-loading hang
+  di.sl<AuthBloc>().add(AuthCheckRequested());
   
   runApp(const MyApp());
 }
@@ -25,10 +28,10 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => di.sl<AuthBloc>()..add(AuthCheckRequested()),
+    return BlocProvider.value(
+      value: di.sl<AuthBloc>(),
       child: MaterialApp.router(
-        title: 'LMS Touch and Solve',
+        title: 'Nirvoor E-Learning',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,
@@ -38,9 +41,7 @@ class MyApp extends StatelessWidget {
             secondary: AppColors.secondaryGreen,
             error: AppColors.errorRed,
           ),
-          textTheme: GoogleFonts.poppinsTextTheme(
-              ThemeData.light().textTheme
-          ),
+          textTheme: GoogleFonts.poppinsTextTheme(),
           scaffoldBackgroundColor: AppColors.scaffoldBackground,
           appBarTheme: const AppBarTheme(
             backgroundColor: AppColors.primaryBlue,

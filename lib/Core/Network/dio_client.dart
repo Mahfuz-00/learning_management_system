@@ -1,11 +1,12 @@
 import 'package:dio/dio.dart';
 import '../Constants/app_constants.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import '../../Data/DataSources/auth_local_data_source.dart';
 
 class DioClient {
   final Dio dio;
+  final AuthLocalDataSource localDataSource;
 
-  DioClient(this.dio) {
+  DioClient(this.dio, this.localDataSource) {
     dio
       ..options.baseUrl = AppConstants.baseUrl
       ..options.connectTimeout = const Duration(seconds: 30)
@@ -20,8 +21,7 @@ class DioClient {
       ))
       ..interceptors.add(InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final box = await Hive.openBox(AppConstants.userBox);
-          final token = box.get(AppConstants.tokenKey);
+          final token = await localDataSource.getToken();
           if (token != null) {
             options.headers['Authorization'] = 'Bearer $token';
           }
@@ -29,7 +29,7 @@ class DioClient {
         },
         onError: (DioException e, handler) {
           if (e.response?.statusCode == 401) {
-            // Handle token expiration - potentially logout user
+            // Handle token expiration - potentially logout user via some global event or sl<AuthBloc>().add(LogoutRequested())
           }
           return handler.next(e);
         },

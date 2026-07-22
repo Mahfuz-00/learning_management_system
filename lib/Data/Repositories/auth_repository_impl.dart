@@ -27,7 +27,9 @@ class AuthRepositoryImpl implements AuthRepository {
       return Right(userModel);
     } catch (e) {
       log('AuthRepo Error: $e');
-      return Left(AuthFailure(e.toString()));
+      // Clean up the error message by removing the "Exception: " prefix if present
+      final message = e.toString().replaceFirst('Exception: ', '').replaceFirst('Exception', '');
+      return Left(AuthFailure(message));
     }
   }
 
@@ -38,7 +40,8 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Right(unit);
     } catch (e) {
       log('AuthRepo Error: $e');
-      return Left(AuthFailure(e.toString()));
+      final message = e.toString().replaceFirst('Exception: ', '').replaceFirst('Exception', '');
+      return Left(AuthFailure(message));
     }
   }
 
@@ -53,7 +56,7 @@ class AuthRepositoryImpl implements AuthRepository {
       if (localUser != null) {
         return Right(localUser);
       }
-      return Left(CacheFailure('No cached user found'));
+      return const Left(CacheFailure('No cached user found'));
     }
   }
 
@@ -78,7 +81,8 @@ class AuthRepositoryImpl implements AuthRepository {
       await remoteDataSource.forgotPassword(email);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      final message = e.toString().replaceFirst('Exception: ', '').replaceFirst('Exception', '');
+      return Left(ServerFailure(message));
     }
   }
 
@@ -88,7 +92,8 @@ class AuthRepositoryImpl implements AuthRepository {
       await remoteDataSource.verifyOtp(email, otp);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      final message = e.toString().replaceFirst('Exception: ', '').replaceFirst('Exception', '');
+      return Left(ServerFailure(message));
     }
   }
 
@@ -98,7 +103,8 @@ class AuthRepositoryImpl implements AuthRepository {
       await remoteDataSource.resetPassword(email, password);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      final message = e.toString().replaceFirst('Exception: ', '').replaceFirst('Exception', '');
+      return Left(ServerFailure(message));
     }
   }
 }

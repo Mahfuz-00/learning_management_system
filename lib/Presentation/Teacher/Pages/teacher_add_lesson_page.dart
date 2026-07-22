@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/file_picker.dart' as fp;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import '../../Course/Bloc/course_bloc.dart';
@@ -39,10 +39,10 @@ class _TeacherAddLessonPageState extends State<TeacherAddLessonPage> {
 
   Future<void> _pickVideo() async {
     try {
-      // In modern file_picker (^5.0.0+), platform is the standard way.
-      // If your IDE still shows error, ensure you have run 'flutter pub get' after updating pubspec.yaml.
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.video,
+      // Using explicit prefix to ensure we are calling the correct FilePicker class
+      // and its static platform getter from the file_picker package.
+      final fp.FilePickerResult? result = await fp.FilePicker.platform.pickFiles(
+        type: fp.FileType.video,
         allowMultiple: false,
       );
 

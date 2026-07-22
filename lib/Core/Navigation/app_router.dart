@@ -1,6 +1,5 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import '../../Presentation/Auth/Bloc/auth_bloc.dart';
 import '../../Presentation/Auth/Bloc/auth_state.dart';
 import '../../Presentation/Auth/Pages/login_page.dart';
@@ -43,6 +42,8 @@ import '../../Presentation/Course/Bloc/course_bloc.dart';
 import '../../Presentation/Course/Bloc/lesson_bloc.dart';
 import '../../Presentation/Course/Bloc/video_download_bloc.dart';
 import '../../Presentation/Student/Bloc/store_bloc.dart';
+import 'router_refresh_stream.dart';
+import 'dart:developer';
 
 class AppRouter {
   static const String splash = '/';
@@ -53,7 +54,7 @@ class AppRouter {
   static const String otp = '/otp';
   static const String newPassword = '/new-password';
   static const String authSuccess = '/auth-success';
-  
+
   static const String studentHome = '/student';
   static const String studentBrowse = '/student/browse';
   static const String studentWishlist = '/student/wishlist';
@@ -61,7 +62,7 @@ class AppRouter {
   static const String studentClasses = '/student/classes';
   static const String studentStore = '/student/store';
   static const String studentCertificates = '/student/certificates';
-  
+
   static const String teacherHome = '/teacher';
   static const String teacherCourseManagement = '/teacher/courses';
   static const String teacherCreateCourse = '/teacher/create-course';
@@ -81,6 +82,7 @@ class AppRouter {
 
   static final GoRouter router = GoRouter(
     initialLocation: splash,
+    refreshListenable: GoRouterRefreshStream(sl<AuthBloc>().stream),
     debugLogDiagnostics: true,
     routes: [
       GoRoute(
@@ -118,7 +120,7 @@ class AppRouter {
           return SuccessPage(message: message);
         },
       ),
-      
+
       GoRoute(
         path: courseDetails,
         builder: (context, state) {
@@ -158,7 +160,7 @@ class AppRouter {
           );
         },
       ),
-      
+
       GoRoute(
         path: quizPlayer,
         builder: (context, state) {
@@ -334,25 +336,33 @@ class AppRouter {
       ),
     ],
     redirect: (context, state) {
-      final authState = context.read<AuthBloc>().state;
-      final bool isLoggingIn = state.uri.path == login || 
-                               state.uri.path == signup || 
-                               state.uri.path == splash || 
-                               state.uri.path == forgotPassword ||
-                               state.uri.path == otp ||
-                               state.uri.path == newPassword;
+      final authState = sl<AuthBloc>().state;
+      log('Router Redirect: current state is $authState, path is ${state.uri.path}');
+
+      final currentPath = state.uri.path;
+
+      // Allow the app to always render SplashPage on startup without intercepting
+      if (currentPath == splash) {
+        return null;
+      }
+
+      final bool isAuthRoute = currentPath == login ||
+          currentPath == signup ||
+          currentPath == forgotPassword ||
+          currentPath == otp ||
+          currentPath == newPassword;
 
       if (authState is Unauthenticated) {
-        return isLoggingIn ? null : login;
+        return isAuthRoute ? null : login;
       }
 
       if (authState is Authenticated) {
         final user = authState.user;
         if (user.isTeacher && user.status != 'Approved') {
-          return pendingApproval;
+          return currentPath == pendingApproval ? null : pendingApproval;
         }
-        
-        if (isLoggingIn) {
+
+        if (isAuthRoute) {
           return user.isStudent ? studentHome : teacherHome;
         }
       }
