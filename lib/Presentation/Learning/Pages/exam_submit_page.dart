@@ -36,12 +36,13 @@ class _ExamSubmitPageState extends State<ExamSubmitPage> {
   Future<void> _pickAnswerFile() async {
     setState(() => _picking = true);
     try {
-      final result = await FilePicker.platform.pickFiles(
+      // file_picker v13 returns List<PlatformFile> directly for pickFiles()
+      final List<PlatformFile> files = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png'],
       );
-      if (result != null && result.files.single.path != null) {
-        setState(() => _answerFile = File(result.files.single.path!));
+      if (files.isNotEmpty && files.first.path != null) {
+        setState(() => _answerFile = File(files.first.path!));
       }
     } finally {
       if (mounted) setState(() => _picking = false);
@@ -51,8 +52,8 @@ class _ExamSubmitPageState extends State<ExamSubmitPage> {
   void _submit() {
     if (_answerFile == null) return;
     context.read<LearningBloc>().add(
-          SubmitExamAnswer(examId: widget.examId, file: _answerFile!),
-        );
+      SubmitExamAnswer(examId: widget.examId, file: _answerFile!),
+    );
   }
 
   @override
@@ -94,16 +95,16 @@ class _ExamSubmitPageState extends State<ExamSubmitPage> {
                   child: ElevatedButton.icon(
                     icon: state.isSubmitting
                         ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                         : const Icon(Icons.upload_file),
                     onPressed:
-                        (_answerFile == null || state.isSubmitting) ? null : _submit,
+                    (_answerFile == null || state.isSubmitting) ? null : _submit,
                     label: Text(state.isSubmitting ? 'Uploading…' : 'Submit Answer'),
                   ),
                 ),
@@ -160,7 +161,7 @@ class _ExamSubmitPageState extends State<ExamSubmitPage> {
                 children: [
                   const Text(
                     'Download the question paper, write your answer, then '
-                    'upload it below.',
+                        'upload it below.',
                     style: TextStyle(fontSize: 13),
                   ),
                   const SizedBox(height: 10),

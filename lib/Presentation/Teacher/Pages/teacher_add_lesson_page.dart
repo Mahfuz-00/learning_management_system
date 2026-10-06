@@ -39,15 +39,13 @@ class _TeacherAddLessonPageState extends State<TeacherAddLessonPage> {
 
   Future<void> _pickVideo() async {
     try {
-      // Using explicit prefix to ensure we are calling the correct FilePicker class
-      // and its static platform getter from the file_picker package.
-      final fp.FilePickerResult? result = await fp.FilePicker.platform.pickFiles(
+      // In file_picker v13, pickFiles() returns List<fp.PlatformFile> directly
+      final List<fp.PlatformFile> files = await fp.FilePicker.pickFiles(
         type: fp.FileType.video,
-        allowMultiple: false,
       );
 
-      if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
+      if (files.isNotEmpty && files.first.path != null) {
+        final file = File(files.first.path!);
         final size = await file.length();
         if (size > 500 * 1024 * 1024) {
           if (!mounted) return;
@@ -58,7 +56,7 @@ class _TeacherAddLessonPageState extends State<TeacherAddLessonPage> {
         }
         setState(() {
           _videoFile = file;
-          _videoFileName = result.files.single.name;
+          _videoFileName = files.first.name;
         });
       }
     } catch (e) {
@@ -84,9 +82,9 @@ class _TeacherAddLessonPageState extends State<TeacherAddLessonPage> {
       };
 
       context.read<CourseBloc>().add(AddLessonRequested(
-            data: data,
-            video: !_isYoutube ? _videoFile : null,
-          ));
+        data: data,
+        video: !_isYoutube ? _videoFile : null,
+      ));
     }
   }
 
