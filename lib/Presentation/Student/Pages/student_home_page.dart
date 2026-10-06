@@ -139,7 +139,9 @@ class _StudentHomePageState extends State<StudentHomePage> {
               return Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: InkWell(
-                  onTap: () => context.push('/workspace/${course.id}', extra: course),
+                  // Enrolled students land on the course hub with its five cards
+                  // (Manual §4.3), not the raw workspace.
+                  onTap: () => context.push('/hub/${course.id}', extra: course),
                   child: Container(
                     width: 200,
                     decoration: BoxDecoration(

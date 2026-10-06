@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'dart:io';
+import '../../Core/Error/exceptions.dart';
 import '../../Core/Error/failures.dart';
 import '../../Domain/Entities/course_entity.dart';
 import '../../Domain/Entities/lesson_entity.dart';
@@ -8,7 +9,6 @@ import '../../Domain/Entities/live_class_entity.dart';
 import '../../Domain/Entities/certificate_entity.dart';
 import '../../Domain/Entities/store_item_entity.dart';
 import '../../Domain/Entities/comment_entity.dart';
-import '../../Domain/Entities/rating_entity.dart';
 import '../../Domain/Entities/user_preference_entity.dart';
 import '../../Domain/Repositories/course_repository.dart';
 import '../DataSources/course_remote_data_source.dart';
@@ -33,7 +33,7 @@ class CourseRepositoryImpl implements CourseRepository {
       return Right(courses);
     } catch (e) {
       log('Repo Error: $e');
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -43,7 +43,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final course = await remoteDataSource.getCourseById(id);
       return Right(course);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -53,7 +53,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final courses = await remoteDataSource.getMyEnrollments();
       return Right(courses);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -63,20 +63,17 @@ class CourseRepositoryImpl implements CourseRepository {
       await remoteDataSource.enrollInCourse(courseId);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
   @override
-  Future<Either<Failure, bool>> checkEnrollmentStatus(String courseId) async {
+  Future<Either<Failure, Map<String, dynamic>>> getCourseStats(String courseId) async {
     try {
-      final status = await remoteDataSource.checkEnrollmentStatus(courseId);
-      // Assuming it returns a map with a boolean or similar, based on the check status logic
-      // In CourseRemoteDataSource it returns Future<Map<String, dynamic>>
-      // If the data exists and is valid, user is enrolled.
-      return Right(status.isNotEmpty);
+      final stats = await remoteDataSource.getCourseStats(courseId);
+      return Right(stats);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -86,7 +83,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final lessons = await remoteDataSource.getLessonsByCourse(courseId);
       return Right(lessons);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -98,7 +95,7 @@ class CourseRepositoryImpl implements CourseRepository {
       await remoteDataSource.toggleWishlist(courseId, user.id);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -110,17 +107,32 @@ class CourseRepositoryImpl implements CourseRepository {
       final isWishlisted = await remoteDataSource.checkWishlist(courseId, user.id);
       return Right(isWishlisted);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
   @override
-  Future<Either<Failure, void>> saveVideoProgress(String lessonId, Map<String, dynamic> progressData) async {
+  Future<Either<Failure, List<CourseEntity>>> getMyWishlist() async {
+    try {
+      final user = await localDataSource.getUser();
+      if (user == null) return const Left(AuthFailure('Please log in to see your wishlist.'));
+      final courses = await remoteDataSource.getMyWishlist(user.id);
+      return Right(courses);
+    } catch (e) {
+      return Left(_map(e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> saveVideoProgress(
+    String lessonId,
+    Map<String, dynamic> progressData,
+  ) async {
     try {
       await remoteDataSource.saveVideoProgress(lessonId, progressData);
-      return const Right(null);
+      return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -132,7 +144,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final progress = await remoteDataSource.getVideoProgress(lessonId, user.id);
       return Right(progress);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -142,7 +154,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final questions = await remoteDataSource.getQuizQuestions(lessonId);
       return Right(questions);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -158,7 +170,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final result = await remoteDataSource.submitQuiz(lessonId, payload);
       return Right(result);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -170,7 +182,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final hasAttempted = await remoteDataSource.hasAttemptedQuiz(lessonId, user.id);
       return Right(hasAttempted);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -180,7 +192,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final leaderboard = await remoteDataSource.getQuizLeaderboard();
       return Right(leaderboard);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -190,7 +202,34 @@ class CourseRepositoryImpl implements CourseRepository {
       final classes = await remoteDataSource.getLiveClassesByCourse(courseId);
       return Right(classes);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<LiveClassEntity>>> getRecordingsByCourse(
+    String courseId,
+  ) async {
+    try {
+      // Manual §4.3: the Recordings hub card shows *past* live classes the
+      // teacher uploaded.
+      final recordings = await remoteDataSource.getRecordingsByCourse(courseId);
+      return Right(recordings);
+    } catch (e) {
+      return Left(_map(e));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> uploadRecording(
+    String liveClassId,
+    File file,
+  ) async {
+    try {
+      await remoteDataSource.uploadRecording(liveClassId, file);
+      return const Right(unit);
+    } catch (e) {
+      return Left(_map(e));
     }
   }
 
@@ -200,7 +239,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final data = await remoteDataSource.joinLiveClass(id);
       return Right(data);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -210,7 +249,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final items = await remoteDataSource.getStoreItems();
       return Right(items);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -222,7 +261,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final certificates = await remoteDataSource.getMyCertificates(user.id);
       return Right(certificates);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -232,7 +271,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final courses = await remoteDataSource.getTeacherCourses();
       return Right(courses);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -242,7 +281,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final id = await remoteDataSource.createCourse(data);
       return Right(id);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -252,7 +291,7 @@ class CourseRepositoryImpl implements CourseRepository {
       await remoteDataSource.uploadThumbnail(id, image);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -262,7 +301,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final id = await remoteDataSource.createLesson(data);
       return Right(id);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -272,7 +311,7 @@ class CourseRepositoryImpl implements CourseRepository {
       await remoteDataSource.uploadLessonVideo(id, video);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -282,7 +321,7 @@ class CourseRepositoryImpl implements CourseRepository {
       await remoteDataSource.setVideoUrl(id, url);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -292,7 +331,7 @@ class CourseRepositoryImpl implements CourseRepository {
       await remoteDataSource.createLiveClass(data);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -302,7 +341,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final students = await remoteDataSource.getEnrolledStudents(courseId);
       return Right(students);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -312,7 +351,7 @@ class CourseRepositoryImpl implements CourseRepository {
       await remoteDataSource.addQuizQuestion(lessonId, quizData);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -322,7 +361,7 @@ class CourseRepositoryImpl implements CourseRepository {
       await remoteDataSource.addRating(data);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -332,7 +371,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final summary = await remoteDataSource.getRatingSummary(courseId);
       return Right(summary);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -342,7 +381,7 @@ class CourseRepositoryImpl implements CourseRepository {
       final comments = await remoteDataSource.getCourseComments(courseId, pageNumber, pageSize);
       return Right(comments.map((e) => CommentModel.fromJson(e)).toList());
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -352,7 +391,7 @@ class CourseRepositoryImpl implements CourseRepository {
       await remoteDataSource.addComment(data);
       return const Right(unit);
     } catch (e) {
-      return Left(ServerFailure(e.toString()));
+      return Left(_map(e));
     }
   }
 
@@ -383,5 +422,28 @@ class CourseRepositoryImpl implements CourseRepository {
     } catch (e) {
       return Left(CacheFailure(e.toString()));
     }
+  }
+
+  /// Translates a data-layer exception into a domain [Failure].
+  ///
+  /// Centralised so every screen produces the same message for the same
+  /// underlying problem, and so Rule 13's rate-limit is never mistaken for a
+  /// credentials error.
+  Failure _map(Object error) {
+    if (error is RateLimitFailure) return error;
+    if (error is AuthException) return AuthFailure(error.message);
+    if (error is NetworkException) return NetworkFailure(error.message);
+    if (error is CacheException) return CacheFailure(error.message);
+    if (error is ServerException) {
+      if (error.statusCode == 429) {
+        return RateLimitFailure(
+          retryAfterSeconds: error.retryAfterSeconds ?? 60,
+          message: error.message,
+        );
+      }
+      if (error.statusCode == 404) return NotFoundFailure(error.message);
+      return ServerFailure(error.message, statusCode: error.statusCode);
+    }
+    return ServerFailure(error.toString().replaceFirst('Exception: ', '').trim());
   }
 }

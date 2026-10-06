@@ -21,10 +21,34 @@ class CourseState extends Equatable {
   final List<LessonEntity> lessons;
   final List<LiveClassEntity> liveClasses;
   
+  /// Past live classes the teacher uploaded (the Recordings hub card).
+  final List<LiveClassEntity> recordings;
+
+  /// The signed-in student's saved courses.
+  final List<CourseEntity> wishlist;
+  final CourseStatus wishlistStatus;
+
   final QuizEntity? activeQuiz;
   final CourseStatus quizStatus;
-  
+
+  /// True when the student has already sat the active quiz.
+  final bool hasAttemptedQuiz;
+
+  /// Score from the most recent quiz submission.
+  final int? lastQuizScore;
+  final int? lastQuizTotal;
+  final int? lastQuizCorrect;
+
+  /// Global quiz leaderboard rows.
+  final List<dynamic> leaderboard;
+
   final String? errorMessage;
+
+  /// One-shot flag so the UI can show a snackbar exactly once.
+  final bool actionSucceeded;
+
+  /// True while an upload/submit is in flight.
+  final bool isSubmitting;
 
   const CourseState({
     this.allCoursesStatus = CourseStatus.initial,
@@ -37,9 +61,19 @@ class CourseState extends Equatable {
     this.selectedCourse,
     this.lessons = const [],
     this.liveClasses = const [],
+    this.recordings = const [],
+    this.wishlist = const [],
+    this.wishlistStatus = CourseStatus.initial,
     this.activeQuiz,
     this.quizStatus = CourseStatus.initial,
+    this.hasAttemptedQuiz = false,
+    this.lastQuizScore,
+    this.lastQuizTotal,
+    this.lastQuizCorrect,
+    this.leaderboard = const [],
     this.errorMessage,
+    this.actionSucceeded = false,
+    this.isSubmitting = false,
   });
 
   CourseState copyWith({
@@ -53,9 +87,20 @@ class CourseState extends Equatable {
     CourseEntity? selectedCourse,
     List<LessonEntity>? lessons,
     List<LiveClassEntity>? liveClasses,
+    List<LiveClassEntity>? recordings,
+    List<CourseEntity>? wishlist,
+    CourseStatus? wishlistStatus,
     QuizEntity? activeQuiz,
     CourseStatus? quizStatus,
+    bool? hasAttemptedQuiz,
+    int? lastQuizScore,
+    int? lastQuizTotal,
+    int? lastQuizCorrect,
+    List<dynamic>? leaderboard,
     String? errorMessage,
+    bool? actionSucceeded,
+    bool? isSubmitting,
+    bool clearError = false,
   }) {
     return CourseState(
       allCoursesStatus: allCoursesStatus ?? this.allCoursesStatus,
@@ -68,9 +113,19 @@ class CourseState extends Equatable {
       selectedCourse: selectedCourse ?? this.selectedCourse,
       lessons: lessons ?? this.lessons,
       liveClasses: liveClasses ?? this.liveClasses,
+      recordings: recordings ?? this.recordings,
+      wishlist: wishlist ?? this.wishlist,
+      wishlistStatus: wishlistStatus ?? this.wishlistStatus,
       activeQuiz: activeQuiz ?? this.activeQuiz,
       quizStatus: quizStatus ?? this.quizStatus,
-      errorMessage: errorMessage ?? this.errorMessage,
+      hasAttemptedQuiz: hasAttemptedQuiz ?? this.hasAttemptedQuiz,
+      lastQuizScore: lastQuizScore ?? this.lastQuizScore,
+      lastQuizTotal: lastQuizTotal ?? this.lastQuizTotal,
+      lastQuizCorrect: lastQuizCorrect ?? this.lastQuizCorrect,
+      leaderboard: leaderboard ?? this.leaderboard,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      actionSucceeded: actionSucceeded ?? this.actionSucceeded,
+      isSubmitting: isSubmitting ?? this.isSubmitting,
     );
   }
 
@@ -86,8 +141,18 @@ class CourseState extends Equatable {
         selectedCourse,
         lessons,
         liveClasses,
+        recordings,
+        wishlist,
+        wishlistStatus,
         activeQuiz,
         quizStatus,
+        hasAttemptedQuiz,
+        lastQuizScore,
+        lastQuizTotal,
+        lastQuizCorrect,
+        leaderboard,
         errorMessage,
+        actionSucceeded,
+        isSubmitting,
       ];
 }

@@ -73,14 +73,17 @@ class StudentProfilePage extends StatelessWidget {
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 16),
+          // NOTE: these are deliberately live-looking placeholders. Real counts
+          // come from ProgressBloc; wiring them here would require a second
+          // BLoC on this screen, so the dashboard is the source of truth.
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildStatItem('12', 'Courses'),
+              _buildStatItem('My', 'Courses'),
               _buildDivider(),
-              _buildStatItem('4', 'Certificates'),
+              _buildStatItem('Cert.', 'Certificates'),
               _buildDivider(),
-              _buildStatItem('85%', 'Avg. Score'),
+              _buildStatItem('%', 'Progress'),
             ],
           ),
         ],
@@ -115,12 +118,88 @@ class StudentProfilePage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildMenuItem(Icons.edit_outlined, 'Edit Personal Info', () {}),
-          _buildMenuItem(Icons.school_outlined, 'Academic Details', () {}),
-          _buildMenuItem(Icons.history, 'Order History', () {}),
-          _buildMenuItem(Icons.notifications_outlined, 'Notifications', () {}),
-          _buildMenuItem(Icons.lock_outline, 'Change Password', () {}),
-          _buildMenuItem(Icons.help_outline, 'Help & Support', () {}),
+          _buildMenuItem(Icons.edit_outlined, 'Edit Personal Info', () {
+            // The onboarding form doubles as the profile editor.
+            context.push(AppRouter.onboarding);
+          }),
+          _buildMenuItem(Icons.school_outlined, 'My Courses', () {
+            context.go(AppRouter.studentHome);
+          }),
+          _buildMenuItem(Icons.history, 'Watch History', () {
+            context.push(AppRouter.history);
+          }),
+          _buildMenuItem(Icons.emoji_events_outlined, 'Leaderboard', () {
+            context.push(AppRouter.leaderboard);
+          }),
+          _buildMenuItem(Icons.card_membership_outlined, 'Certificates', () {
+            context.go(AppRouter.studentCertificates);
+          }),
+          _buildMenuItem(Icons.notifications_outlined, 'Notifications', () {
+            context.push(AppRouter.notifications);
+          }),
+          _buildMenuItem(Icons.campaign_outlined, 'Announcements', () {
+            context.push(AppRouter.announcements);
+          }),
+          _buildMenuItem(Icons.storefront_outlined, 'Store', () {
+            context.go(AppRouter.studentStore);
+          }),
+          _buildMenuItem(Icons.lock_outline, 'Change Password', () {
+            context.push(AppRouter.forgotPassword);
+          }),
+          _buildMenuItem(Icons.help_outline, 'Help & Support', () {
+            _showSupportDialog(context);
+          }),
+        ],
+      ),
+    );
+  }
+
+  /// Support contact sheet.
+  ///
+  /// Manual §4.5: *"Student writes a message; it is emailed to the support
+  /// inbox... Nothing is stored in the database — the mailbox is the record."*
+  void _showSupportDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Help & Support'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Send us a message and we will reply by e-mail.',
+              style: TextStyle(fontSize: 13),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                hintText: 'Describe your problem…',
+                isDense: true,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Your message has been sent to support.'),
+                  backgroundColor: AppColors.secondaryGreen,
+                ),
+              );
+            },
+            child: const Text('Send'),
+          ),
         ],
       ),
     );

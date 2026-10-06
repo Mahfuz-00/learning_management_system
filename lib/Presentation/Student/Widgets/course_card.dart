@@ -69,6 +69,49 @@ class CourseCard extends StatelessWidget {
                     ),
                   ),
                 ),
+
+                // Rule 3: an Upcoming course is badged "Coming soon" and is
+                // kept out of "Most popular" (handled by the parent list).
+                if (course.isComingSoon)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.orange,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'COMING SOON',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  )
+                else if (course.isEnrolled)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.secondaryGreen,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'ENROLLED',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
             Padding(
@@ -98,12 +141,20 @@ class CourseCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // Rule 3: an Upcoming course shows NO price and the word
+                      // "Free" is never displayed for it.
                       Text(
-                        course.price == 0 ? 'Free' : '৳${course.price.toStringAsFixed(0)}',
-                        style: const TextStyle(
+                        course.isComingSoon
+                            ? 'Coming soon'
+                            : (course.isFree
+                                ? 'Free'
+                                : '৳${course.price.toStringAsFixed(0)}'),
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primaryBlue,
-                          fontSize: 14,
+                          color: course.isComingSoon
+                              ? Colors.orange
+                              : AppColors.primaryBlue,
+                          fontSize: course.isComingSoon ? 12.5 : 14,
                         ),
                       ),
                       Row(
@@ -111,7 +162,9 @@ class CourseCard extends StatelessWidget {
                           const Icon(Icons.play_circle_outline, size: 14, color: AppColors.secondaryGreen),
                           const SizedBox(width: 4),
                           Text(
-                            '${course.totalLessons} Lessons',
+                            // Rule 5: this may be marketing text, not a real
+                            // count. Never use it to verify an enrollment.
+                            course.marketingVideoText ?? '${course.totalLessons} Lessons',
                             style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
                           ),
                         ],
