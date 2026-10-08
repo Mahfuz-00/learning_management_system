@@ -52,7 +52,9 @@ class DioClient {
       onRequest: (options, handler) async {
         // Rule 12: the free-live namespace is public. Sending a stale token
         // there can cause a 401 on a route that should never require auth.
-        if (_isPublicRoute(options.path)) {
+        final path = options.path;
+        final uriPath = options.uri.path;
+        if (_isPublicRoute(path) || _isPublicRoute(uriPath)) {
           return handler.next(options);
         }
 
@@ -64,9 +66,13 @@ class DioClient {
       },
       onError: (DioException error, handler) async {
         // ── Token refresh ────────────────────────────────────────────────
+        final path = error.requestOptions.path;
+        final uriPath = error.requestOptions.uri.path;
         if (error.response?.statusCode == 401 &&
-            !_isPublicRoute(error.requestOptions.path) &&
-            !_isAuthRoute(error.requestOptions.path) &&
+            !_isPublicRoute(path) &&
+            !_isPublicRoute(uriPath) &&
+            !_isAuthRoute(path) &&
+            !_isAuthRoute(uriPath) &&
             error.requestOptions.extra['__retried'] != true) {
           final refreshed = await _tryRefreshToken();
           if (refreshed) {
@@ -95,6 +101,7 @@ class DioClient {
     return path.contains('LiveClass/free') ||
         path.contains('Register/invite') ||
         path.contains('Register/Login') ||
+        path.contains('/api/Register/Login') ||
         path.contains('app/login') ||
         path.contains('Register/Register') ||
         path.contains('PasswordReset') ||
@@ -111,6 +118,7 @@ class DioClient {
   /// session", so refreshing would be pointless and wasteful.
   static bool _isAuthRoute(String path) {
     return path.contains('Register/Login') ||
+        path.contains('/api/Register/Login') ||
         path.contains('app/login') ||
         path.contains('Register/Register') ||
         path.contains('Register/Refresh') ||

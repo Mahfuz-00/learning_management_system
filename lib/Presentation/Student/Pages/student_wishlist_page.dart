@@ -22,7 +22,9 @@ class _StudentWishlistPageState extends State<StudentWishlistPage> {
   }
 
   void _loadWishlist() {
-    context.read<CourseBloc>().add(LoadAllCourses());
+    // Load the saved wishlist itself (not the whole catalogue) so the page
+    // shows exactly what the server has and stays cheap to refresh.
+    context.read<CourseBloc>().add(const LoadMyWishlist());
   }
 
   @override
@@ -31,12 +33,34 @@ class _StudentWishlistPageState extends State<StudentWishlistPage> {
       appBar: AppBar(
         title: const Text('My Wishlist'),
       ),
-      body: BlocBuilder<CourseBloc, CourseState>(
-        builder: (context, state) {
-          if (state.allCoursesStatus == CourseStatus.loading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state.allCoursesStatus == CourseStatus.loaded) {
-            final wishlist = state.allCourses.where((c) => c.isWishlisted).toList();
+      body: BlocListener<CourseBloc, CourseState>(
+        // Surface a failed toggle as a snackbar. The bloc already rolled the
+        // heart icon back, so we only need to inform the user.
+        listenWhen: (previous, current) =>
+            current.wishlistToggleError != null &&
+            previous.wishlistToggleError != current.wishlistToggleError,
+        listener: (context, state) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.wishlistToggleError!),
+              backgroundColor: AppColors.errorRed,
+            ),
+          );
+        },
+        child: BlocBuilder<CourseBloc, CourseState>(
+          builder: (context, state) {
+            final wishlist = state.wishlist;
+
+            if (state.wishlistStatus == CourseStatus.loading &&
+                wishlist.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state.wishlistStatus == CourseStatus.error &&
+                wishlist.isEmpty) {
+              return Center(
+                child: Text(state.errorMessage ?? 'Error loading wishlist'),
+              );
+            }
 
             if (wishlist.isEmpty) {
               return Center(
@@ -73,16 +97,15 @@ class _StudentWishlistPageState extends State<StudentWishlistPage> {
                   course: course,
                   onTap: () => context.push('/course/${course.id}'),
                   onWishlistToggle: () {
-                    context.read<CourseBloc>().add(ToggleWishlistEvent(course.id));
+                    context
+                        .read<CourseBloc>()
+                        .add(ToggleWishlistEvent(course.id));
                   },
                 );
               },
             );
-          } else if (state.allCoursesStatus == CourseStatus.error) {
-            return Center(child: Text(state.errorMessage ?? 'Error loading wishlist'));
-          }
-          return const SizedBox();
-        },
+          },
+        ),
       ),
     );
   }

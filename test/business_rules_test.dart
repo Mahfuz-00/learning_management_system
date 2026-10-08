@@ -1,4 +1,7 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:lms_touch_and_solve/Core/Constants/app_constants.dart';
+import 'package:lms_touch_and_solve/Core/Error/exceptions.dart';
 import 'package:lms_touch_and_solve/Core/Error/failures.dart';
 import 'package:lms_touch_and_solve/Domain/Entities/course_entity.dart';
 import 'package:lms_touch_and_solve/Domain/Entities/exam_entity.dart';
@@ -279,6 +282,78 @@ void main() {
       // "Removing an item only hides it — it does not delete the progress."
       expect(hidden.watchedSeconds, 300);
       expect(hidden.percentComplete, 50);
+    });
+  });
+
+  group('DioErrorMapper 401 handling on auth vs non-auth routes', () {
+    test('401 on /api/Register/Login returns server message', () {
+      final dioError = DioException(
+        requestOptions: RequestOptions(path: '/api/Register/Login'),
+        response: Response(
+          requestOptions: RequestOptions(path: '/api/Register/Login'),
+          statusCode: 401,
+          data: {'message': 'Invalid email or password.'},
+        ),
+        type: DioExceptionType.badResponse,
+      );
+
+      final exception = DioErrorMapper.map(dioError);
+      expect(exception, isA<AuthException>());
+      expect((exception as AuthException).message, 'Invalid email or password.');
+    });
+
+    test('401 on non-auth route returns session expired message', () {
+      final dioError = DioException(
+        requestOptions: RequestOptions(path: '/api/Student/me'),
+        response: Response(
+          requestOptions: RequestOptions(path: '/api/Student/me'),
+          statusCode: 401,
+        ),
+        type: DioExceptionType.badResponse,
+      );
+
+      final exception = DioErrorMapper.map(dioError);
+      expect(exception, isA<AuthException>());
+      expect(
+        (exception as AuthException).message,
+        'Your session has expired. Please log in again.',
+      );
+    });
+  });
+
+  group('AppConstants image URL resolution and SVG detection', () {
+    test('null or invalid string paths resolve to empty string', () {
+      expect(AppConstants.resolveImageUrl(null), '');
+      expect(AppConstants.resolveImageUrl(''), '');
+      expect(AppConstants.resolveImageUrl('null'), '');
+      expect(AppConstants.resolveImageUrl('undefined'), '');
+    });
+
+    test('replaces obsolete IP 160.191.150.185:8071 with live asset host', () {
+      final resolved = AppConstants.resolveImageUrl(
+        'http://160.191.150.185:8071/uploads/Images/test.jpg',
+      );
+      expect(resolved, 'https://api.nirvoor.com/uploads/Images/test.jpg');
+    });
+
+    test('rewrites SPA-host upload URLs onto the API asset host', () {
+      // The backend stores some thumbnails as learning.nirvoor.com URLs, whose
+      // SPA catch-all returns index.html (200 text/html) instead of image bytes.
+      final resolved = AppConstants.resolveImageUrl(
+        'https://learning.nirvoor.com/uploads/Images/thumb.png',
+      );
+      expect(resolved, 'https://api.nirvoor.com/uploads/Images/thumb.png');
+    });
+
+    test('relative filename prepends imagesPath', () {
+      final resolved = AppConstants.resolveImageUrl('course.jpg');
+      expect(resolved, 'https://api.nirvoor.com/uploads/Images/course.jpg');
+    });
+
+    test('detects svg extension', () {
+      expect(AppConstants.isSvgUrl('https://example.com/icon.svg'), isTrue);
+      expect(AppConstants.isSvgUrl('https://example.com/icon.svg?v=1'), isTrue);
+      expect(AppConstants.isSvgUrl('https://example.com/image.png'), isFalse);
     });
   });
 }

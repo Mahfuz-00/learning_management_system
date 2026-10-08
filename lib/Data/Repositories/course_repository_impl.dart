@@ -30,10 +30,38 @@ class CourseRepositoryImpl implements CourseRepository {
   Future<Either<Failure, List<CourseEntity>>> getAllCourses() async {
     try {
       final courses = await remoteDataSource.getAllCourses();
-      return Right(courses);
+      return Right(await _hydrateWishlist(courses));
     } catch (e) {
       log('Repo Error: $e');
       return Left(_map(e));
+    }
+  }
+
+  /// Marks `isWishlisted` on [courses] by cross-referencing the signed-in
+  /// user's wishlist.
+  ///
+  /// **Why this exists:** `Course/GetAll` does not include an `isWishlisted`
+  /// field (verified against the live API), so after any refresh/re-fetch every
+  /// course came back with the flag reset to `false` and the heart icon
+  /// disappeared. The wishlist module is the single source of truth, so we merge
+  /// its course IDs onto the catalogue here. A failure to load the wishlist is
+  /// non-fatal: the catalogue is returned unchanged rather than erroring out.
+  Future<List<CourseEntity>> _hydrateWishlist(List<CourseEntity> courses) async {
+    if (courses.isEmpty) return courses;
+    try {
+      final user = await localDataSource.getUser();
+      if (user == null) return courses;
+      final wishlist = await remoteDataSource.getMyWishlist(user.id);
+      if (wishlist.isEmpty) return courses;
+      final wishlistedIds = wishlist.map((c) => c.id).toSet();
+      return courses
+          .map((c) => wishlistedIds.contains(c.id) && !c.isWishlisted
+              ? c.copyWithWishlist(true)
+              : c)
+          .toList();
+    } catch (e) {
+      log('Wishlist hydration skipped: $e');
+      return courses;
     }
   }
 
@@ -41,7 +69,8 @@ class CourseRepositoryImpl implements CourseRepository {
   Future<Either<Failure, CourseEntity>> getCourseById(String id) async {
     try {
       final course = await remoteDataSource.getCourseById(id);
-      return Right(course);
+      final hydrated = await _hydrateWishlist([course]);
+      return Right(hydrated.first);
     } catch (e) {
       return Left(_map(e));
     }
@@ -51,7 +80,7 @@ class CourseRepositoryImpl implements CourseRepository {
   Future<Either<Failure, List<CourseEntity>>> getMyEnrollments() async {
     try {
       final courses = await remoteDataSource.getMyEnrollments();
-      return Right(courses);
+      return Right(await _hydrateWishlist(courses));
     } catch (e) {
       return Left(_map(e));
     }

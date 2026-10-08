@@ -6,6 +6,7 @@ import '../../Course/Bloc/course_event.dart';
 import '../../Course/Bloc/course_state.dart';
 import '../Widgets/course_card.dart';
 import '../../../Core/Theme/app_colors.dart';
+import '../../../Core/Widgets/app_network_image.dart';
 import 'dart:developer';
 
 class StudentHomePage extends StatefulWidget {
@@ -40,7 +41,21 @@ class _StudentHomePageState extends State<StudentHomePage> {
           ),
         ],
       ),
-      body: RefreshIndicator(
+      body: BlocListener<CourseBloc, CourseState>(
+        // A failed wishlist toggle is rolled back in the bloc; just inform the
+        // user why the heart flipped back.
+        listenWhen: (previous, current) =>
+            current.wishlistToggleError != null &&
+            previous.wishlistToggleError != current.wishlistToggleError,
+        listener: (context, state) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.wishlistToggleError!),
+              backgroundColor: AppColors.errorRed,
+            ),
+          );
+        },
+        child: RefreshIndicator(
         onRefresh: () async {
           _loadData();
         },
@@ -62,6 +77,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
               const SizedBox(height: 32),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -154,15 +170,12 @@ class _StudentHomePageState extends State<StudentHomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
+                        AppNetworkImage(
+                          imageUrl: course.thumbnail,
+                          height: 100,
+                          width: 200,
+                          fit: BoxFit.cover,
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                          child: Image.network(
-                            'http://160.191.150.185:8071/uploads/Images/${course.thumbnail}',
-                            height: 100,
-                            width: 200,
-                            fit: BoxFit.cover,
-                            errorBuilder: (c, e, s) => Container(color: Colors.grey, height: 100),
-                          ),
                         ),
                         Padding(
                           padding: const EdgeInsets.all(8.0),

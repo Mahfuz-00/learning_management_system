@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../Domain/Entities/course_entity.dart';
 import '../../../Domain/Entities/quiz_entity.dart';
 import '../../../Domain/Repositories/course_repository.dart';
 import 'course_event.dart';
@@ -171,16 +172,110 @@ class CourseBloc extends Bloc<CourseEvent, CourseState> {
     ToggleWishlistEvent event,
     Emitter<CourseState> emit,
   ) async {
-    emit(state.copyWith(clearError: true, actionSucceeded: false));
-    final result = await courseRepository.toggleWishlist(event.courseId);
-    result.fold(
-      (failure) => emit(state.copyWith(errorMessage: failure.message)),
-      (_) {
-        emit(state.copyWith(actionSucceeded: true));
-        add(LoadAllCourses());
-        add(const LoadMyWishlist());
-      },
+    final courseId = event.courseId;
+
+    // Ignore a second tap while the first request is still in flight, so we
+    // never fire two toggles that would cancel each other out on the server.
+    if (state.wishlistToggling.contains(courseId)) return;
+
+    final wasWishlisted = _isWishlisted(courseId);
+    final targetState = !wasWishlisted;
+
+    // Optimistic update: flip only this one course everywhere it is shown, and
+    // never downgrade the catalogue status to `loading` — that is what caused
+    // the whole screen to flash/reset and lose scroll position.
+    emit(
+      state.copyWith(
+        clearWishlistToggleError: true,
+        wishlistToggling: {...state.wishlistToggling, courseId},
+        allCourses: _applyWishlistFlag(state.allCourses, courseId, targetState),
+        enrolledCourses:
+            _applyWishlistFlag(state.enrolledCourses, courseId, targetState),
+        wishlist: _updateWishlistMembership(state.wishlist, courseId, targetState),
+        selectedCourse: state.selectedCourse?.id == courseId
+            ? state.selectedCourse!.copyWithWishlist(targetState)
+            : state.selectedCourse,
+      ),
     );
+
+    final result = await courseRepository.toggleWishlist(courseId);
+
+    result.fold(
+      (failure) => emit(
+        state.copyWith(
+          // Roll the icon back to its previous state on failure.
+          wishlistToggling: {...state.wishlistToggling}..remove(courseId),
+          allCourses: _applyWishlistFlag(state.allCourses, courseId, wasWishlisted),
+          enrolledCourses:
+              _applyWishlistFlag(state.enrolledCourses, courseId, wasWishlisted),
+          wishlist:
+              _updateWishlistMembership(state.wishlist, courseId, wasWishlisted),
+          selectedCourse: state.selectedCourse?.id == courseId
+              ? state.selectedCourse!.copyWithWishlist(wasWishlisted)
+              : state.selectedCourse,
+          wishlistToggleError: failure.message,
+        ),
+      ),
+      (_) => emit(
+        state.copyWith(
+          wishlistToggling: {...state.wishlistToggling}..remove(courseId),
+        ),
+      ),
+    );
+  }
+
+  /// Current wishlist flag for a course, preferring the dedicated wishlist list
+  /// and falling back to the catalogue entry.
+  bool _isWishlisted(String courseId) {
+    for (final c in state.wishlist) {
+      if (c.id == courseId) return true;
+    }
+    for (final c in state.allCourses) {
+      if (c.id == courseId) return c.isWishlisted;
+    }
+    if (state.selectedCourse?.id == courseId) {
+      return state.selectedCourse!.isWishlisted;
+    }
+    return false;
+  }
+
+  /// Returns [courses] with only the matching course's flag changed.
+  List<CourseEntity> _applyWishlistFlag(
+    List<CourseEntity> courses,
+    String courseId,
+    bool wishlisted,
+  ) {
+    return courses
+        .map((c) => c.id == courseId ? c.copyWithWishlist(wishlisted) : c)
+        .toList();
+  }
+
+  /// Keeps the saved-courses list in sync without a full re-fetch: adds the
+  /// course when it becomes wishlisted (reusing the catalogue copy for its
+  /// data) and removes it when it stops being wishlisted.
+  List<CourseEntity> _updateWishlistMembership(
+    List<CourseEntity> wishlist,
+    String courseId,
+    bool wishlisted,
+  ) {
+    if (!wishlisted) {
+      return wishlist.where((c) => c.id != courseId).toList();
+    }
+    if (wishlist.any((c) => c.id == courseId)) {
+      return _applyWishlistFlag(wishlist, courseId, true);
+    }
+    CourseEntity? source;
+    for (final c in state.allCourses) {
+      if (c.id == courseId) {
+        source = c;
+        break;
+      }
+    }
+    if (source == null && state.selectedCourse?.id == courseId) {
+      source = state.selectedCourse;
+    }
+    if (source == null) return wishlist;
+    return [...wishlist, source.copyWithWishlist(true)];
   }
 
   /// Reads the wishlist flag for a single course.
@@ -216,10 +311,23 @@ class CourseBloc extends Bloc<CourseEvent, CourseState> {
         wishlistStatus: CourseStatus.error,
         errorMessage: failure.message,
       )),
-      (courses) => emit(state.copyWith(
-        wishlistStatus: CourseStatus.loaded,
-        wishlist: courses,
-      )),
+      (courses) {
+        // Re-mark the catalogue from the wishlist so the heart icons stay
+        // correct regardless of whether the catalogue or the wishlist loaded
+        // last. `Course/GetAll` does not return `isWishlisted`, so this is what
+        // keeps the state consistent after a refresh.
+        final wishlistedIds = courses.map((c) => c.id).toSet();
+        final syncedCourses = state.allCourses
+            .map((c) => c.isWishlisted != wishlistedIds.contains(c.id)
+                ? c.copyWithWishlist(wishlistedIds.contains(c.id))
+                : c)
+            .toList();
+        emit(state.copyWith(
+          wishlistStatus: CourseStatus.loaded,
+          wishlist: courses,
+          allCourses: syncedCourses,
+        ));
+      },
     );
   }
 

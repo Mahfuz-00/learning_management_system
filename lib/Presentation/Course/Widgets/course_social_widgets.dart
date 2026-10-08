@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../Domain/Entities/comment_entity.dart';
 import '../../../Core/Theme/app_colors.dart';
+import '../../../Core/Widgets/app_network_image.dart';
 
 class CourseRatingWidget extends StatelessWidget {
   final Map<String, dynamic> summary;
@@ -107,10 +108,28 @@ class CommentListItem extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircleAvatar(
-            backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
-            backgroundImage: comment.userProfilePicture != null ? NetworkImage(comment.userProfilePicture!) : null,
-            child: comment.userProfilePicture == null ? Text(comment.userName[0]) : null,
+          ClipOval(
+            child: SizedBox(
+              width: 40,
+              height: 40,
+              child: AppNetworkImage(
+                imageUrl: comment.userProfilePicture,
+                width: 40,
+                height: 40,
+                fit: BoxFit.cover,
+                errorWidget: Container(
+                  width: 40,
+                  height: 40,
+                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  child: Center(
+                    child: Text(
+                      comment.userName.isNotEmpty ? comment.userName[0] : '?',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(

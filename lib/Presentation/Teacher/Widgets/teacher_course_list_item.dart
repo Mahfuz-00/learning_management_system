@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../Domain/Entities/course_entity.dart';
-import '../../../Core/Constants/app_constants.dart';
 import '../../../Core/Theme/app_colors.dart';
+import '../../../Core/Widgets/app_network_image.dart';
 
 class TeacherCourseListItem extends StatelessWidget {
   final CourseEntity course;
@@ -27,19 +26,17 @@ class TeacherCourseListItem extends StatelessWidget {
         padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
-            ClipRRect(
+            AppNetworkImage(
+              imageUrl: course.thumbnail,
+              width: 100,
+              height: 75,
+              fit: BoxFit.cover,
               borderRadius: BorderRadius.circular(8),
-              child: CachedNetworkImage(
-                imageUrl: '${AppConstants.imagesPath}${course.thumbnail}',
+              errorWidget: Container(
                 width: 100,
                 height: 75,
-                fit: BoxFit.cover,
-                errorWidget: (context, url, error) => Container(
-                  width: 100,
-                  height: 75,
-                  color: Colors.grey.shade200,
-                  child: const Icon(Icons.book, color: Colors.grey),
-                ),
+                color: Colors.grey.shade200,
+                child: const Icon(Icons.book, color: Colors.grey),
               ),
             ),
             const SizedBox(width: 16),

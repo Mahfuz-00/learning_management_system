@@ -117,6 +117,11 @@ class DioErrorMapper {
       case 400:
         return ServerException(message: message, statusCode: 400);
       case 401:
+        final path = error.requestOptions.path;
+        final uriPath = error.requestOptions.uri.path;
+        if (_isAuthRoute(path) || _isAuthRoute(uriPath)) {
+          return AuthException(message);
+        }
         return const AuthException('Your session has expired. Please log in again.');
       case 403:
         return const AuthException(
@@ -149,6 +154,17 @@ class DioErrorMapper {
       default:
         return ServerException(message: message, statusCode: status);
     }
+  }
+
+  /// True for auth routes — a 401 here means "bad credentials", not "expired
+  /// session".
+  static bool _isAuthRoute(String path) {
+    return path.contains('Register/Login') ||
+        path.contains('/api/Register/Login') ||
+        path.contains('app/login') ||
+        path.contains('Register/Register') ||
+        path.contains('Register/Refresh') ||
+        path.contains('PasswordReset');
   }
 
   /// Reads `Retry-After` (seconds). Falls back to the Rule 13 value of 60s.

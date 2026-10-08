@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../Domain/Entities/course_entity.dart';
-import '../../../Core/Constants/constants.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../Core/Widgets/app_network_image.dart';
 
 class EnrolledCoursesSection extends StatelessWidget {
   final List<CourseEntity> courses;
@@ -48,18 +47,15 @@ class EnrolledCoursesSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
+                  AppNetworkImage(
+                    imageUrl: course.thumbnail,
+                    height: 100,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                    child: CachedNetworkImage(
-                      imageUrl: '${AppConstants.imagesUrl}${course.thumbnail}',
-                      height: 100,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(color: Colors.grey[200]),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.book, size: 40),
-                      ),
+                    errorWidget: Container(
+                      color: Colors.grey[200],
+                      child: const Icon(Icons.book, size: 40),
                     ),
                   ),
                   Padding(

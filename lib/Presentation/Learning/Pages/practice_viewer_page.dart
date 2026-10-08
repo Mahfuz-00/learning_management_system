@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../Core/Theme/app_colors.dart';
+import '../../../Core/Widgets/app_network_image.dart';
 import '../../../Domain/Entities/practice_entity.dart';
 
 /// Displays a list of practice files or exam suggestions.
@@ -150,11 +151,10 @@ class _FileViewerPage extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: type == PracticeFileType.image
               ? InteractiveViewer(
-                  child: CachedNetworkImage(
+                  child: AppNetworkImage(
                     imageUrl: url,
-                    placeholder: (_, __) =>
-                        const Center(child: CircularProgressIndicator()),
-                    errorWidget: (_, __, ___) => _fallback(),
+                    placeholder: const Center(child: CircularProgressIndicator()),
+                    errorWidget: _fallback(),
                   ),
                 )
               : _fallback(),

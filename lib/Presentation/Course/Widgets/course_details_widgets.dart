@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../Domain/Entities/course_entity.dart';
 import '../../../Domain/Entities/lesson_entity.dart';
-import '../../../Core/Constants/app_constants.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../Core/Widgets/app_network_image.dart';
 
 class CourseHeader extends StatelessWidget {
   final CourseEntity course;
@@ -14,12 +13,12 @@ class CourseHeader extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CachedNetworkImage(
-          imageUrl: '${AppConstants.imagesPath}${course.thumbnail}',
+        AppNetworkImage(
+          imageUrl: course.thumbnail,
           height: 200,
           width: double.infinity,
           fit: BoxFit.cover,
-          errorWidget: (context, url, error) => Container(
+          errorWidget: Container(
             height: 200,
             color: Colors.grey[300],
             child: const Icon(Icons.image, size: 50),

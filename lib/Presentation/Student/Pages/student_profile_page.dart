@@ -6,6 +6,8 @@ import '../../Auth/Bloc/auth_event.dart';
 import '../../Auth/Bloc/auth_state.dart';
 import '../../../Core/Theme/app_colors.dart';
 import '../../../Core/Navigation/app_router.dart';
+import '../../../Core/Constants/app_constants.dart';
+import '../../../Core/Widgets/app_network_image.dart';
 
 class StudentProfilePage extends StatelessWidget {
   const StudentProfilePage({super.key});
@@ -55,13 +57,23 @@ class StudentProfilePage extends StatelessWidget {
       ),
       child: Column(
         children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundColor: AppColors.primaryBlue.withOpacity(0.1),
-            backgroundImage: user.profilePicture != null ? NetworkImage(user.profilePicture) : null,
-            child: user.profilePicture == null
-                ? const Icon(Icons.person, size: 50, color: AppColors.primaryBlue)
-                : null,
+          ClipOval(
+            child: SizedBox(
+              width: 100,
+              height: 100,
+              child: AppNetworkImage(
+                imageUrl: user.profilePicture,
+                width: 100,
+                height: 100,
+                fit: BoxFit.cover,
+                errorWidget: Container(
+                  width: 100,
+                  height: 100,
+                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  child: const Icon(Icons.person, size: 50, color: AppColors.primaryBlue),
+                ),
+              ),
+            ),
           ),
           const SizedBox(height: 16),
           Text(

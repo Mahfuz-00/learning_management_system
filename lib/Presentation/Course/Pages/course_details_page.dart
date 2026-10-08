@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../Core/Constants/app_constants.dart';
 import '../../../Core/Theme/app_colors.dart';
+import '../../../Core/Widgets/app_network_image.dart';
 import '../../../Domain/Entities/course_entity.dart';
 import '../../../Domain/Entities/lesson_entity.dart';
 import '../Bloc/course_bloc.dart';
@@ -58,7 +59,21 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: BlocConsumer<CourseBloc, CourseState>(
+        listenWhen: (previous, current) =>
+            previous.errorMessage != current.errorMessage ||
+            previous.wishlistToggleError != current.wishlistToggleError ||
+            (current.actionSucceeded != previous.actionSucceeded),
         listener: (context, state) {
+          // A failed wishlist toggle rolls the heart back and reports here.
+          if (state.wishlistToggleError != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.wishlistToggleError!),
+                backgroundColor: AppColors.errorRed,
+              ),
+            );
+            return;
+          }
           if (state.errorMessage != null && !state.isSubmitting) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -226,10 +241,10 @@ class _CourseDetailsPageState extends State<CourseDetailsPage> {
       expandedHeight: 230,
       pinned: true,
       flexibleSpace: FlexibleSpaceBar(
-        background: CachedNetworkImage(
-          imageUrl: '${AppConstants.imagesPath}${course.thumbnail}',
+        background: AppNetworkImage(
+          imageUrl: course.thumbnail,
           fit: BoxFit.cover,
-          errorWidget: (context, url, error) => Container(
+          errorWidget: Container(
             color: Colors.grey.shade300,
             child: const Icon(Icons.image_not_supported, color: Colors.grey),
           ),

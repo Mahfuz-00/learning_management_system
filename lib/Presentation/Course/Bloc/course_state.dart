@@ -28,6 +28,14 @@ class CourseState extends Equatable {
   final List<CourseEntity> wishlist;
   final CourseStatus wishlistStatus;
 
+  /// Course IDs whose wishlist toggle is currently in flight. Used to ignore
+  /// double-taps and to avoid treating the optimistic update as final.
+  final Set<String> wishlistToggling;
+
+  /// Set when the most recent wishlist toggle failed, so the UI can roll the
+  /// icon back and show a snackbar exactly once.
+  final String? wishlistToggleError;
+
   final QuizEntity? activeQuiz;
   final CourseStatus quizStatus;
 
@@ -64,6 +72,8 @@ class CourseState extends Equatable {
     this.recordings = const [],
     this.wishlist = const [],
     this.wishlistStatus = CourseStatus.initial,
+    this.wishlistToggling = const {},
+    this.wishlistToggleError,
     this.activeQuiz,
     this.quizStatus = CourseStatus.initial,
     this.hasAttemptedQuiz = false,
@@ -90,6 +100,9 @@ class CourseState extends Equatable {
     List<LiveClassEntity>? recordings,
     List<CourseEntity>? wishlist,
     CourseStatus? wishlistStatus,
+    Set<String>? wishlistToggling,
+    String? wishlistToggleError,
+    bool clearWishlistToggleError = false,
     QuizEntity? activeQuiz,
     CourseStatus? quizStatus,
     bool? hasAttemptedQuiz,
@@ -116,6 +129,10 @@ class CourseState extends Equatable {
       recordings: recordings ?? this.recordings,
       wishlist: wishlist ?? this.wishlist,
       wishlistStatus: wishlistStatus ?? this.wishlistStatus,
+      wishlistToggling: wishlistToggling ?? this.wishlistToggling,
+      wishlistToggleError: clearWishlistToggleError
+          ? null
+          : (wishlistToggleError ?? this.wishlistToggleError),
       activeQuiz: activeQuiz ?? this.activeQuiz,
       quizStatus: quizStatus ?? this.quizStatus,
       hasAttemptedQuiz: hasAttemptedQuiz ?? this.hasAttemptedQuiz,
@@ -144,6 +161,8 @@ class CourseState extends Equatable {
         recordings,
         wishlist,
         wishlistStatus,
+        wishlistToggling,
+        wishlistToggleError,
         activeQuiz,
         quizStatus,
         hasAttemptedQuiz,

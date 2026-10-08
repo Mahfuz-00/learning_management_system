@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../Domain/Entities/course_entity.dart';
-import '../../../Core/Constants/constants.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../../../Core/Widgets/app_network_image.dart';
 
 class CourseListItem extends StatelessWidget {
   final CourseEntity course;
@@ -23,19 +22,17 @@ class CourseListItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         child: Row(
           children: [
-            ClipRRect(
+            AppNetworkImage(
+              imageUrl: course.thumbnail,
+              width: 120,
+              height: 100,
+              fit: BoxFit.cover,
               borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-              child: CachedNetworkImage(
-                imageUrl: '${AppConstants.imagesUrl}${course.thumbnail}',
+              errorWidget: Container(
                 width: 120,
                 height: 100,
-                fit: BoxFit.cover,
-                errorWidget: (context, url, error) => Container(
-                  width: 120,
-                  height: 100,
-                  color: Colors.grey[200],
-                  child: const Icon(Icons.book),
-                ),
+                color: Colors.grey[200],
+                child: const Icon(Icons.book),
               ),
             ),
             Expanded(
@@ -60,18 +57,17 @@ class CourseListItem extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          '\$${course.price.toStringAsFixed(2)}',
+                          '৳${course.price.toStringAsFixed(0)}',
                           style: TextStyle(
                             color: Theme.of(context).primaryColor,
                             fontWeight: FontWeight.bold,
                             fontSize: 15,
                           ),
                         ),
-                        if (course.totalLessons != null)
-                          Text(
-                            '${course.totalLessons} Lessons',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
+                        Text(
+                          '${course.totalLessons} Lessons',
+                          style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
                       ],
                     ),
                   ],

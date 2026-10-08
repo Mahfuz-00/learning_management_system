@@ -35,7 +35,21 @@ class _StudentBrowsePageState extends State<StudentBrowsePage> {
       appBar: AppBar(
         title: const Text('Discover Courses'),
       ),
-      body: Column(
+      body: BlocListener<CourseBloc, CourseState>(
+        // A failed wishlist toggle is rolled back in the bloc; just tell the
+        // user why the heart flipped back.
+        listenWhen: (previous, current) =>
+            current.wishlistToggleError != null &&
+            previous.wishlistToggleError != current.wishlistToggleError,
+        listener: (context, state) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.wishlistToggleError!),
+              backgroundColor: AppColors.errorRed,
+            ),
+          );
+        },
+        child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
@@ -91,6 +105,7 @@ class _StudentBrowsePageState extends State<StudentBrowsePage> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
