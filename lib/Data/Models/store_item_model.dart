@@ -1,4 +1,5 @@
 import '../../Domain/Entities/store_item_entity.dart';
+import 'json_utils.dart';
 
 class StoreItemModel extends StoreItemEntity {
   const StoreItemModel({
@@ -15,7 +16,7 @@ class StoreItemModel extends StoreItemEntity {
       id: json['id']?.toString() ?? '',
       title: json['title'] ?? '',
       description: json['description'],
-      price: (json['price'] ?? 0).toDouble(),
+      price: JsonUtils.toDouble(json['price']),
       thumbnail: json['thumbnail'] ?? json['image'],
       author: json['author'],
     );

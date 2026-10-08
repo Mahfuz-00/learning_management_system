@@ -83,7 +83,7 @@ class CourseModel extends CourseEntity {
       rating: json['rating'] != null ? _toDouble(json['rating']) : null,
       isCompleted: json['isCompleted'] as bool? ?? false,
 
-      lessons: (json['lessons'] as List? ?? [])
+      lessons: (json['lessons'] is List ? json['lessons'] as List : const [])
           .whereType<Map>()
           .map((e) => LessonModel.fromJson(Map<String, dynamic>.from(e)))
           .toList(),

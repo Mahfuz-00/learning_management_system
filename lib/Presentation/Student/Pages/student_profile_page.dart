@@ -122,14 +122,17 @@ class StudentProfilePage extends StatelessWidget {
   }
 
   Widget _buildProfileMenu(BuildContext context) {
+    // Use a Material surface (not a coloured Container) so ListTile ink splashes
+    // remain visible — a plain DecoratedBox/Container with a background colour
+    // triggers a framework assertion and hides the tap feedback.
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
+      child: Material(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          children: [
           _buildMenuItem(Icons.edit_outlined, 'Edit Personal Info', () {
             // The onboarding form doubles as the profile editor.
             context.push(AppRouter.onboarding);
@@ -162,6 +165,7 @@ class StudentProfilePage extends StatelessWidget {
             _showSupportDialog(context);
           }),
         ],
+        ),
       ),
     );
   }
